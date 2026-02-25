@@ -62,6 +62,10 @@ Ensure changes are reviewable and merge-ready through high-quality commits, PR s
   - `bug` for defect fixes.
   - `documentation` for docs-only changes.
 - If creating the PR without metadata, immediately follow with `gh pr edit` to add assignee/labels, then verify with `gh pr view`.
+- On QNAP hosts where native `git` is unavailable, use a Docker-backed shell wrapper for all `git` commands in the current session:
+  ```sh
+  function git () { (docker run -ti --rm -v ${HOME}:/root -v $(pwd):/git alpine/git "$@") }
+  ```
 
 ## GitHub CLI Checklist
 
