@@ -62,18 +62,20 @@ Ensure changes are reviewable and merge-ready through high-quality commits, PR s
   - `bug` for defect fixes.
   - `documentation` for docs-only changes.
 - If creating the PR without metadata, immediately follow with `gh pr edit` to add assignee/labels, then verify with `gh pr view`.
-- On QNAP hosts where native `git` is unavailable, use a Docker-backed shell wrapper for all `git` commands in the current session:
+- On QNAP hosts where native `git`/`gh` are unavailable, use Docker-backed shell wrappers for `git` and `gh` commands in the current session:
   ```sh
   function git () { (docker run -ti --rm -v ${HOME}:/root -v $(pwd):/git alpine/git "$@") }
+  function gh () { (docker run --rm -it -e GH_TOKEN -e HOME=/tmp/gh-home -v "$HOME/.config/gh-docker":/tmp/gh-home -v "$(pwd)":/work -w /work --add-host host.docker.internal:host-gateway serversideup/github-cli gh "$@") }
   ```
 
 ## GitHub CLI Checklist
 
 1. Validate commit message policy (`type(scope): subject`) before push.
-2. Create PR with complete title/body.
-3. Ensure assignee and label are set:
+2. On QNAP hosts, load `git` and `gh` wrappers before running CLI steps.
+3. Create PR with complete title/body.
+4. Ensure assignee and label are set:
    - `gh pr edit <number> --add-assignee @me --add-label <label>`
-4. Verify required metadata and commit headline:
+5. Verify required metadata and commit headline:
    - `gh pr view <number> --json assignees,labels,commits,title,url`
 
 ## Collaboration/Handoffs
