@@ -1,0 +1,88 @@
+model = "gpt-5.1-codex-mini"
+model_reasoning_effort = "medium"
+personality = "pragmatic"
+
+[features]
+multi_agent = true
+
+# logical_role = "role-system-architect"
+[agents.architect]
+model = "gpt-5.3-codex"
+reasoning_effort = "high"
+execution = "main"
+
+# logical_role = "role-code-review-architect"
+[agents."code-review-architect"]
+model = "gpt-5.3-codex"
+reasoning_effort = "high"
+sandbox_mode = "read-only"
+execution = "sub"
+
+# logical_role = "role-staff-frontend"
+[agents."staff-frontend"]
+model = "gpt-5.3-codex"
+reasoning_effort = "high"
+execution = "main"
+
+# logical_role = "role-backend-data-engineer"
+[agents."staff-backend"]
+model = "gpt-5.3-codex"
+reasoning_effort = "high"
+execution = "main"
+
+# logical_role = "role-platform-automation"
+[agents."senior-devops"]
+model = "gpt-5.3-codex"
+reasoning_effort = "high"
+execution = "main"
+
+# logical_role = "role-staff-qa"
+[agents."staff-qa"]
+model = "gpt-5.3-codex"
+reasoning_effort = "high"
+execution = "main"
+
+# logical_role = "role-backend-data-engineer"
+[agents."db-designer"]
+model = "gpt-5-codex-mini"
+reasoning_effort = "medium"
+execution = "main"
+
+# logical_role = "role-product-delivery-manager"
+[agents."product-manager"]
+model = "gpt-5-codex-mini"
+reasoning_effort = "medium"
+execution = "main"
+
+# logical_role = "role-product-delivery-manager"
+[agents."project-manager"]
+model = "gpt-5-codex-mini"
+reasoning_effort = "medium"
+execution = "main"
+
+# logical_role = "role-technical-writer"
+[agents."technical-writer"]
+model = "gpt-5-codex-mini"
+reasoning_effort = "medium"
+execution = "main"
+
+# logical_role = "role-platform-automation"
+[agents."script-developer"]
+model = "gpt-5-codex-mini"
+reasoning_effort = "medium"
+execution = "main"
+
+# logical_role = "role-delivery-strategist"
+[agents."commit-strategist"]
+model = "gpt-5-codex-mini"
+reasoning_effort = "medium"
+execution = "sub"
+
+# logical_role = "role-delivery-strategist"
+[agents."pr-strategist"]
+model = "gpt-5-codex-mini"
+reasoning_effort = "medium"
+execution = "sub"
+
+[projects."/Users/keithc/00.work/00.repo/github.com/kzokv/codex-home"]
+trust_level = "trusted"
