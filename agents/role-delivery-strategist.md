@@ -12,7 +12,7 @@ Ensure changes are reviewable and merge-ready through high-quality commits, PR s
 
 - Commit message policy and commit-scope hygiene.
 - PR structure and reviewer-ready narrative quality.
-- Labels/assignee/reviewer policy adherence.
+- PR metadata policy adherence (assignee + label) and verification.
 - PR-level testing and rollback declaration completeness.
 
 ## Does Not Own
@@ -43,14 +43,34 @@ Ensure changes are reviewable and merge-ready through high-quality commits, PR s
 
 1. Validate commit scope and message quality.
 2. Assemble PR narrative from change evidence.
-3. Apply labels/assignees and reviewer policy.
+3. Apply required PR metadata (assignee + label) and verify it.
 4. Escalate mixed concerns requiring split commits/PRs.
 
 ## Quality Gates
 
-- Conventional commit format is enforced.
+- Conventional commit format is enforced as `type(scope): subject`.
 - PR template sections are complete.
 - Risk and rollback information is explicit for high-impact changes.
+- PR metadata is complete and verified: assignee and label are present.
+
+## Execution Defaults
+
+- Always assign the PR to the owner running the delivery flow (for example, `--add-assignee @me`).
+- Always apply at least one repository label before handoff.
+- Prefer repository default labels when no project-specific label map exists:
+  - `enhancement` for non-bug code/config improvements.
+  - `bug` for defect fixes.
+  - `documentation` for docs-only changes.
+- If creating the PR without metadata, immediately follow with `gh pr edit` to add assignee/labels, then verify with `gh pr view`.
+
+## GitHub CLI Checklist
+
+1. Validate commit message policy (`type(scope): subject`) before push.
+2. Create PR with complete title/body.
+3. Ensure assignee and label are set:
+   - `gh pr edit <number> --add-assignee @me --add-label <label>`
+4. Verify required metadata and commit headline:
+   - `gh pr view <number> --json assignees,labels,commits,title,url`
 
 ## Collaboration/Handoffs
 
