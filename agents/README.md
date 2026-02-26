@@ -23,6 +23,7 @@ This directory defines a canonical multi-agent model with implementation roles p
 - `role-git-orchestrator.md`
 - `role-frontend-reviewer.md`
 - `role-backend-reviewer.md`
+- `role-devops-reviewer.md`
 - `role-qa-reviewer.md`
 - `role-database-reviewer.md`
 - `role-design-reviewer.md`

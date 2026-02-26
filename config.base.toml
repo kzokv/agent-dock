@@ -64,3 +64,7 @@ config_file = "agents-config/database-reviewer.toml"
 [agents."design-reviewer"]
 description = "Reviews UI/UX fidelity, interaction consistency, and usability risks."
 config_file = "agents-config/design-reviewer.toml"
+
+[agents."devops-reviewer"]
+description = "Reviews CI/CD reliability, infrastructure automation, and rollout safety risks."
+config_file = "agents-config/devops-reviewer.toml"

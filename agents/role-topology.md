@@ -16,6 +16,7 @@ This document defines the canonical role model for implementation/coordination a
 - `role-git-orchestrator`
 - `role-frontend-reviewer`
 - `role-backend-reviewer`
+- `role-devops-reviewer`
 - `role-qa-reviewer`
 - `role-database-reviewer`
 - `role-design-reviewer`
@@ -38,6 +39,7 @@ Each capability has exactly one primary owner. Supporting roles contribute but d
 | Git workflow execution (branch/commit/PR/release-note) | `role-git-orchestrator` | `role-project-manager`, `role-technical-writer` |
 | Frontend code governance and risk review | `role-frontend-reviewer` | `role-architect`, `role-design-reviewer` |
 | Backend code governance and risk review | `role-backend-reviewer` | `role-architect`, `role-database-reviewer` |
+| DevOps governance review for CI/CD, infrastructure changes, and rollout risk | `role-devops-reviewer` | `role-architect`, `role-devops` |
 | Test quality and CI-signal governance review | `role-qa-reviewer` | `role-architect`, `role-qa-engineer` |
 | Database schema, migration, and integrity governance review | `role-database-reviewer` | `role-backend-reviewer`, `role-backend-engineer` |
 | UI/UX consistency and usability governance review | `role-design-reviewer` | `role-frontend-reviewer`, `role-ui-ux-designer` |
