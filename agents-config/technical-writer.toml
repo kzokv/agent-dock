@@ -1,0 +1,3 @@
+model = "gpt-5-codex-mini"
+reasoning_effort = "medium"
+execution = "sub"

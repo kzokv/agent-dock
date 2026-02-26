@@ -1,0 +1,80 @@
+name: PR Gate
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled, assigned, unassigned]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate title, metadata, and PR policy
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const failures = [];
+
+            const title = (pr.title || "").trim();
+            const titlePattern = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)\([^)]+\): .+/;
+            if (!titlePattern.test(title)) {
+              failures.push(
+                "PR title must follow Conventional Commits style: `type(scope): subject`."
+              );
+            }
+
+            if (!pr.assignee && (!pr.assignees || pr.assignees.length === 0)) {
+              failures.push("PR must have at least one assignee.");
+            }
+
+            const labels = (pr.labels || []).map((l) => l.name).filter(Boolean);
+            const requiredPrimaryLabels = new Set(["bug", "enhancement", "documentation"]);
+            const hasPrimaryLabel = labels.some((label) => requiredPrimaryLabels.has(label));
+            if (!hasPrimaryLabel) {
+              failures.push(
+                "PR must include a primary label that matches content: `bug`, `enhancement`, or `documentation`."
+              );
+            }
+
+            const body = (pr.body || "");
+            const requiredSections = [
+              "## Problem",
+              "## Solution",
+              "## Testing",
+              "## Risk/Rollback",
+            ];
+            for (const section of requiredSections) {
+              if (!body.includes(section)) {
+                failures.push(`PR body is missing required section: ${section}`);
+              }
+            }
+
+            function getSectionText(markdown, sectionName) {
+              const marker = `## ${sectionName}`;
+              const start = markdown.indexOf(marker);
+              if (start < 0) {
+                return "";
+              }
+              const after = markdown.slice(start + marker.length);
+              const nextHeader = after.search(/\n##\s+/);
+              const section = nextHeader < 0 ? after : after.slice(0, nextHeader);
+              return section.trim();
+            }
+
+            const testingText = getSectionText(body, "Testing");
+            const evidenceMatch = testingText.match(/(?:^|\\n)Evidence:\\s*([\\s\\S]*?)(?=\\n(?:Evidence|Waiver):|$)/);
+            const waiverMatch = testingText.match(/(?:^|\\n)Waiver:\\s*([\\s\\S]*?)(?=\\n(?:Evidence|Waiver):|$)/);
+            const evidenceValue = evidenceMatch ? evidenceMatch[1].trim() : "";
+            const waiverValue = waiverMatch ? waiverMatch[1].trim() : "";
+
+            if (!evidenceValue && !waiverValue) {
+              failures.push(
+                "PR `## Testing` must include either `Evidence:` (commands/checks and outcomes) or `Waiver:` (requester-approved reason and approver)."
+              );
+            }
+
+            if (failures.length > 0) {
+              core.setFailed("PR gate failed:\n- " + failures.join("\n- "));
+            } else {
+              core.info("PR gate passed.");
+            }

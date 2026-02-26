@@ -1,67 +1,119 @@
 # codex-home
 
-Shared Codex home for cross-platform reuse.
+User-level Codex home shared across machines. This repo packages global agent policy, reusable skills, onboarding automation, and PR hygiene checks.
 
-## Tracked
+`AGENTS.md` is the canonical policy source. `README.md` is the operator guide.
 
-- `skills/`
+## What this repo contains
+
+Tracked:
+
+- `AGENTS.md`
 - `agents/`
+- `agents/skills/`
+- `agents-config/`
 - `automations/`
-- `memory.md` (optional)
 - `scripts/`
 - `config.base.toml`
 
-## Not tracked
+Not tracked:
 
-Secrets, machine-local runtime state, and caches are excluded via `.gitignore`.
+- secrets
+- machine-local runtime state
+- caches
+- generated runtime config (`config.toml`)
+- machine-local config (`config.local.toml`)
 
-## Link this repo to ~/.codex
+## Quick start
+
+Link this repo to `~/.codex`:
 
 ```bash
 ./scripts/onboarding.sh
 ```
 
-You can also target a custom Codex home path:
+Use a custom Codex home target:
 
 ```bash
 ./scripts/onboarding.sh /path/to/codex-home
 ```
 
-The onboarding script:
+## Onboarding behavior
 
-- backs up an existing target path (`~/.codex` by default) before creating the symlink
-- upserts machine-local trust settings for this repo by rewriting its `[projects."…"]` block in `config.local.toml` (ignored), preserving other local settings and other project blocks
-- regenerates `config.toml` from `config.base.toml` + `config.local.toml`
-- fails fast with a non-zero exit if `config.base.toml` is missing
+`./scripts/onboarding.sh` will:
 
-Config ownership:
+- back up an existing target path (`~/.codex` by default) before creating the symlink
+- migrate legacy user skills from `~/.codex/skills` to `~/.codex/agents/skills` (one time)
+- maintain `$HOME/.agents/skills -> ~/.codex/agents/skills`
+- upsert machine-local trust for this repo by rewriting only its `[projects."…"]` block in `config.local.toml`
+- regenerate `config.toml` from `config.base.toml` + `config.local.toml`
+- fail fast with non-zero exit when `config.base.toml` is missing
 
-- `config.base.toml` is tracked and is the source of shared defaults
-- `config.local.toml` is machine-local and ignored
-- `config.toml` is generated runtime config and ignored
+Re-running onboarding is idempotent and preserves unrelated local config.
 
-If onboarding is re-run, it preserves other local config and keeps config generation idempotent.
-Never edit `config.toml` directly; treat it as the generated runtime view of the shared (`config.base.toml`) + machine-local (`config.local.toml`) inputs.
-Make shared edits in `config.base.toml`, machine-local edits in `config.local.toml`, then run onboarding to regenerate `config.toml`.
+## Config model
 
-## Config migration hygiene
+- `config.base.toml`: tracked shared defaults
+- `config.local.toml`: machine-local, ignored
+- `config.toml`: generated runtime config, ignored
 
-When migrating config layout (for example, replacing tracked `config.toml` with generated `config.toml` + tracked `config.base.toml`), commit the migration atomically so tracked/ignored files do not drift.
+Do not edit `config.toml` directly. Update `config.base.toml` and/or `config.local.toml`, then rerun onboarding.
 
-```bash
-./scripts/check-config-migration.sh
-```
+## Skills model
 
-## Validate onboarding
+- System skills: built-in Codex capabilities
+- User-level versioned source: `~/.codex/agents/skills`
+- User-level discovery path: `$HOME/.agents/skills`
+- This repo must not define `.agents/skills`
+- Other repos may define `<repo>/.agents/skills` for project-specific workflows
 
-Ensure the onboarding script still behaves as expected (trust block insertion, symlink handling, idempotent config regeneration) by running:
+## Validation and maintenance
+
+Validate onboarding behavior:
 
 ```bash
 ./scripts/test-onboarding.sh
 ```
 
-## Install required skills
+Validate role/skill topology and policy hygiene (RACI table, skill metadata checks, and repo-level skill policy):
+
+```bash
+./scripts/validate-role-skill-topology.py
+```
+
+Check config migration hygiene:
+
+```bash
+./scripts/check-config-migration.sh
+```
+
+Install required skills:
 
 ```bash
 ./scripts/install-required-skills.sh
 ```
+
+Enable local commit-msg hook:
+
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+## Policy and merge gates
+
+Policy source of truth: `AGENTS.md`
+Operator source of truth: `docs/git-pr-flow.md`
+
+Key enforced areas:
+
+- agent/skill invocation contract
+- required Git/PR gate (`type(scope): subject` for commits and PR titles, required sections, content-matched primary label, assignee, relevant tests)
+- governance blockers (`architect` + applicable domain reviewers)
+
+Repo enforcement points:
+
+- PR template: `.github/pull_request_template.md`
+- PR gate workflow: `.github/workflows/pr-gate.yml`
+- local hook bootstrap: `./scripts/setup-git-hooks.sh`
+
+For day-to-day Git/PR workflow steps, examples, and troubleshooting, use `docs/git-pr-flow.md`.

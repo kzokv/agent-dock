@@ -6,7 +6,6 @@ codex_home_override=""
 SCRIPT_PATH="${0##*/}"
 
 log() {
-  # Helper narrates the onboarding workflow (link creation + config rebuild).
   printf '[onboarding] %s\n' "$1"
 }
 
@@ -15,27 +14,32 @@ die() {
   exit 1
 }
 
+die_with_help() {
+  log "ERROR: $1"
+  print_help
+  exit 1
+}
+
 ensure_trailing_newline() {
   local file="$1"
   [ -s "$file" ] || return 0
-  # Command substitution strips trailing newlines, so an empty string means the
-  # file already ends with '\n'.
   if [ "$(tail -c 1 "$file" 2>/dev/null || true)" != "" ]; then
     printf '\n' >> "$file"
   fi
 }
 
 print_help() {
-  cat <<EOF
+  cat <<EOF_HELP
 Description:
-  Link this repo to ~/.codex (or override target) and regenerate config.toml from config.base.toml + config.local.toml.
+  Link this repo to ~/.codex (or override target), migrate user skills to ~/.codex/agents/skills,
+  maintain ~/.agents/skills symlink, and regenerate config.toml from config.base.toml + config.local.toml.
 
 Usage: ${SCRIPT_PATH} [OPTIONS]
 
 Options:
   -h, --help          Show this help message and exit (optional)
   --codex-home PATH   Override the ~/.codex symlink path (optional, default: ~/.codex)
-EOF
+EOF_HELP
 }
 
 while [ $# -gt 0 ]; do
@@ -47,9 +51,7 @@ while [ $# -gt 0 ]; do
     --codex-home)
       shift
       if [ $# -eq 0 ]; then
-        die "--codex-home requires a PATH"
-        print_help
-        exit 1
+        die_with_help "--codex-home requires a PATH"
       fi
       codex_home_override="$1"
       shift
@@ -59,15 +61,11 @@ while [ $# -gt 0 ]; do
       shift
       ;;
     -*)
-      die "Unknown flag $1"
-      print_help
-      exit 1
+      die_with_help "Unknown flag $1"
       ;;
     *)
       if [ -n "$codex_home_override" ]; then
-        die "Multiple positional arguments not supported ($1)"
-        print_help
-        exit 1
+        die_with_help "Multiple positional arguments not supported ($1)"
       fi
       codex_home_override="$1"
       shift
@@ -81,8 +79,11 @@ config_local="$repo_root/config.local.toml"
 config_file="$repo_root/config.toml"
 timestamp="$(date +%Y%m%d%H%M%S)"
 project_header="[projects.\"$repo_root\"]"
+agents_home="$HOME/.agents"
+agents_skills_link="$agents_home/skills"
+codex_skills_dir="$codex_home/agents/skills"
+legacy_skills_dir="$codex_home/skills"
 
-# canonical_path normalizes symlink targets into absolute paths for reliable comparisons.
 canonical_path() {
   local path="$1"
   if [ -d "$path" ]; then
@@ -97,7 +98,6 @@ canonical_path() {
   fi
 }
 
-# resolve_link_target_path converts the symlink's raw link into an absolute path for comparison.
 resolve_link_target_path() {
   local link_path="$1"
   local raw_target
@@ -109,7 +109,6 @@ resolve_link_target_path() {
   fi
 }
 
-# ensure_repo_trust_block centralizes the project trust block upsert, so the config stays consistent.
 ensure_repo_trust_block() {
   local tmp_local
   tmp_local="$(mktemp)"
@@ -128,7 +127,6 @@ ensure_repo_trust_block() {
   mv "$tmp_local" "$config_local"
 }
 
-# generate_runtime_config merges base/local configs into the runtime file without duplicating sections.
 generate_runtime_config() {
   local tmp_config
   tmp_config="$(mktemp)"
@@ -138,9 +136,77 @@ generate_runtime_config() {
   mv "$tmp_config" "$config_file"
 }
 
+migrate_legacy_skills() {
+  if [ ! -d "$legacy_skills_dir" ]; then
+    return 0
+  fi
+
+  log "Found legacy skills path: $legacy_skills_dir"
+  mkdir -p "$(dirname "$codex_skills_dir")"
+
+  if [ ! -e "$codex_skills_dir" ]; then
+    log "Migrating legacy skills to: $codex_skills_dir"
+    mv "$legacy_skills_dir" "$codex_skills_dir"
+    return 0
+  fi
+
+  if [ ! -d "$codex_skills_dir" ]; then
+    die "Target skills path exists but is not a directory: $codex_skills_dir"
+  fi
+
+  log "Merging legacy skills into existing: $codex_skills_dir"
+  shopt -s dotglob nullglob
+  local item base
+  for item in "$legacy_skills_dir"/*; do
+    base="$(basename "$item")"
+    if [ -e "$codex_skills_dir/$base" ]; then
+      die "Cannot migrate legacy skill '$base': destination already exists"
+    fi
+    mv "$item" "$codex_skills_dir/"
+  done
+  shopt -u dotglob nullglob
+  rmdir "$legacy_skills_dir"
+}
+
+ensure_agents_skills_link() {
+  mkdir -p "$agents_home"
+
+  if [ ! -d "$codex_skills_dir" ]; then
+    mkdir -p "$codex_skills_dir"
+  fi
+
+  local target_canonical
+  target_canonical="$(canonical_path "$codex_skills_dir")"
+
+  if [ -L "$agents_skills_link" ]; then
+    local current_target current_path current_canonical
+    current_target="$(readlink "$agents_skills_link")"
+    current_path="$(resolve_link_target_path "$agents_skills_link")"
+    current_canonical="$(canonical_path "$current_path" 2>/dev/null || true)"
+    if [ -n "$current_canonical" ] && [ "$current_canonical" = "$target_canonical" ]; then
+      log "User skills symlink already correct: $agents_skills_link -> $current_target"
+      return 0
+    fi
+
+    local backup_path
+    backup_path="${agents_skills_link}.symlink.backup.$timestamp"
+    log "User skills symlink points elsewhere; backing it up to: $backup_path"
+    mv "$agents_skills_link" "$backup_path"
+  elif [ -e "$agents_skills_link" ]; then
+    local backup_path
+    backup_path="${agents_skills_link}.backup.$timestamp"
+    log "Found existing path at $agents_skills_link; backing it up to: $backup_path"
+    mv "$agents_skills_link" "$backup_path"
+  fi
+
+  log "Creating user skills symlink: $agents_skills_link -> $codex_skills_dir"
+  ln -s "$codex_skills_dir" "$agents_skills_link"
+}
+
 log "Starting onboarding"
 log "Repo root: $repo_root"
 log "Target symlink: $codex_home -> $repo_root"
+
 if [ ! -f "$config_base" ]; then
   die "Missing required base config: $config_base"
 fi
@@ -161,7 +227,6 @@ if [ -L "$codex_home" ]; then
     mv "$codex_home" "$backup_path"
     log "Creating symlink: $codex_home -> $repo_root"
     ln -s "$repo_root" "$codex_home"
-    log "Symlink created"
   fi
 elif [ -e "$codex_home" ]; then
   backup_path="${codex_home}.backup.$timestamp"
@@ -169,12 +234,13 @@ elif [ -e "$codex_home" ]; then
   mv "$codex_home" "$backup_path"
   log "Creating symlink: $codex_home -> $repo_root"
   ln -s "$repo_root" "$codex_home"
-  log "Symlink created"
 else
   log "No existing path at $codex_home; creating symlink"
   ln -s "$repo_root" "$codex_home"
-  log "Symlink created"
 fi
+
+migrate_legacy_skills
+ensure_agents_skills_link
 
 log "Upserting machine-local trust settings in: $config_local"
 ensure_repo_trust_block

@@ -12,54 +12,79 @@
 
 - `openai-docs`
 
-### Security/Governance (roles that own governance)
+### Security/Governance
 
 - `security-best-practices`
 - `security-threat-model`
 - `security-ownership-map`
 
-### GitHub Ops (delivery, QA, platform, review)
+### GitHub Ops
 
 - `gh-address-comments`
 - `gh-fix-ci`
+- `git-gh-docker-fallback`
 
 ## Canonical Role Skill Bindings
 
-- `role-product-delivery-manager`
-- Required: `openai-docs`
-- Optional: `linear`, `notion-spec-to-implementation`, `notion-meeting-intelligence`, `notion-research-documentation` (external), `notion-knowledge-capture` (external)
-
-- `role-system-architect`
+- `role-architect`
 - Required: `openai-docs`, `security-threat-model`
 - Optional: `security-ownership-map`, `sentry`
 
-- `role-staff-frontend`
-- Required: `openai-docs`, `figma-implement-design`, `playwright`
-- Optional: `screenshot`, `figma` (external)
+- `role-product-manager`
+- Required: `openai-docs`
+- Optional: `linear`, `notion-spec-to-implementation`, `notion-meeting-intelligence`
 
-- `role-backend-data-engineer`
+- `role-project-manager`
+- Required: `openai-docs`
+- Optional: `linear`, `notion-spec-to-implementation`, `notion-meeting-intelligence`
+
+- `role-frontend-engineer`
+- Required: `openai-docs`, `figma-implement-design`, `playwright`
+- Optional: `screenshot`
+
+- `role-backend-engineer`
 - Required: `openai-docs`, `sentry`, `spreadsheet`
 - Optional: `jupyter-notebook`, `security-ownership-map`
 
-- `role-staff-qa`
+- `role-qa-engineer`
 - Required: `openai-docs`, `playwright`, `screenshot`, `gh-fix-ci`
 - Optional: `spreadsheet`, `sentry`, `jupyter-notebook`
 
-- `role-platform-automation`
+- `role-ui-ux-designer`
+- Required: `openai-docs`, `figma-implement-design`, `screenshot`
+- Optional: `playwright`, `doc`
+
+- `role-devops`
 - Required: `openai-docs`, `gh-fix-ci`, `sentry`, `jupyter-notebook`
-- Optional: `security-ownership-map`, `render-deploy` (external), `vercel-deploy` (external)
+- Optional: `script-automation`, `security-ownership-map`, `render-deploy` (external), `vercel-deploy` (external)
 
 - `role-technical-writer`
 - Required: `openai-docs`, `doc`, `pdf`
-- Optional: `spreadsheet`, `transcribe` (external), `notion-knowledge-capture` (external)
+- Optional: `spreadsheet`, `notion-meeting-intelligence`
 
-- `role-code-review-architect`
-- Required: `openai-docs`, `security-best-practices`, `security-threat-model`, `security-ownership-map`, `gh-address-comments`, `gh-fix-ci`
-- Optional: `sentry`
-
-- `role-delivery-strategist`
+- `role-git-orchestrator`
 - Required: `openai-docs`, `gh-address-comments`, `gh-fix-ci`
-- Optional: `linear`, `yeet` (external), `notion-knowledge-capture` (external)
+- Optional: `linear`, `git-gh-docker-fallback`
+
+- `role-frontend-reviewer`
+- Required: `openai-docs`, `security-best-practices`, `gh-address-comments`
+- Optional: `security-threat-model`, `playwright`
+
+- `role-backend-reviewer`
+- Required: `openai-docs`, `security-best-practices`, `security-threat-model`, `gh-address-comments`
+- Optional: `security-ownership-map`, `sentry`
+
+- `role-qa-reviewer`
+- Required: `openai-docs`, `gh-fix-ci`
+- Optional: `playwright`, `screenshot`
+
+- `role-database-reviewer`
+- Required: `openai-docs`, `security-best-practices`, `spreadsheet`
+- Optional: `security-ownership-map`, `sentry`
+
+- `role-design-reviewer`
+- Required: `openai-docs`, `figma-implement-design`, `screenshot`
+- Optional: `playwright`, `doc`
 
 ## Install Notes
 
