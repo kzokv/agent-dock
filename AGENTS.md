@@ -25,7 +25,7 @@ This `codex-home` repository is the user-level source of truth for Codex behavio
 
 - `architect` plus domain reviewers are final merge/blocker gates.
 - `git-orchestrator` executes git workflow and release-note flow but cannot override governance blockers.
-- Reviewer overlays (`frontend-reviewer`, `backend-reviewer`, `qa-reviewer`, `database-reviewer`, `design-reviewer`) stay read-only.
+- Reviewer overlays (`frontend-reviewer`, `backend-reviewer`, `devops-reviewer`, `qa-reviewer`, `database-reviewer`, `design-reviewer`) stay read-only.
 
 ## Agent/Skill Invocation Contract
 

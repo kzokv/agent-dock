@@ -74,6 +74,10 @@
 - Required: `openai-docs`, `security-best-practices`, `security-threat-model`, `gh-address-comments`
 - Optional: `security-ownership-map`, `sentry`
 
+- `role-devops-reviewer`
+- Required: `openai-docs`, `gh-fix-ci`, `sentry`, `script-automation`
+- Optional: `security-ownership-map`
+
 - `role-qa-reviewer`
 - Required: `openai-docs`, `gh-fix-ci`
 - Optional: `playwright`, `screenshot`
