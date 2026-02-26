@@ -42,6 +42,8 @@ This directory defines a consolidated multi-agent engineering model with 9 canon
 
 ## Validation
 
-- `config.toml` keeps legacy agent IDs callable and maps each to a logical role.
+- `config.base.toml` defines the tracked agent alias map; onboarding regenerates runtime `config.toml` from base + machine-local `config.local.toml` (shared edits in base, machine-local edits in local). Do not edit `config.toml` directly—the onboarding script owns it.
+- Keep config-layout migrations atomic and run `scripts/check-config-migration.sh` to verify tracked/ignored config state before commit.
+- Run `scripts/test-onboarding.sh` when changing onboarding or config-handling scripts to exercise symlink, trust, and config regeneration behavior.
 - Canonical role contracts own skills and boundaries; alias files stay short.
 - `scripts/validate-role-skill-topology.py` verifies skills, capability ownership, and skill metadata hygiene.
