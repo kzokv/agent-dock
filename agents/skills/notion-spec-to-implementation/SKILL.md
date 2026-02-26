@@ -22,7 +22,7 @@ Convert a Notion spec into linked implementation plans, tasks, and ongoing statu
 1. Add the Notion MCP:
    - `codex mcp add notion --url https://mcp.notion.com/mcp`
 2. Enable remote MCP client:
-   - Set `[features].rmcp_client = true` in `config.toml`, **or** run `codex --enable rmcp_client`
+   - Set `[features].rmcp_client = true` in `config.base.toml` (shared) or `config.local.toml` (machine-local), then run onboarding to regenerate `config.toml`, **or** run `codex --enable rmcp_client`
 3. Log in with OAuth:
    - `codex mcp login notion`
 

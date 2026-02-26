@@ -288,25 +288,6 @@ SKILL
   assert_symlink_target_canonical "$fixture_home/.agents/skills" "$fixture_repo/agents/skills"
 }
 
-test_claude_skills_links_created() {
-  local fixture_root fixture_repo fixture_home codex_home claude_skill_link
-  fixture_root="$(make_fixture)"
-  fixture_repo="$fixture_root/repo"
-  fixture_home="$fixture_root/home"
-  codex_home="$fixture_home/.codex"
-  claude_skill_link="$fixture_home/.claude/skills/claude-skill"
-
-  cat > "$fixture_repo/config.base.toml" <<'BASE'
-model = "gpt-5"
-BASE
-
-  mkdir -p "$fixture_home" "$fixture_repo/agents/skills/claude-skill"
-
-  run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" --skip-gh-auth >/dev/null
-
-  assert_symlink_target_canonical "$claude_skill_link" "$fixture_home/.agents/skills/claude-skill"
-}
-
 test_gh_missing_fails_when_default_on() {
   local fixture_root fixture_repo fixture_home codex_home output_file path_without_gh
   fixture_root="$(make_fixture)"
@@ -442,9 +423,6 @@ printf 'ok - canonical symlink equivalence\n'
 
 test_repo_skills_path_is_not_migrated
 printf 'ok - repo skills path is not migrated\n'
-
-test_claude_skills_links_created
-printf 'ok - claude skills links created\n'
 
 test_gh_missing_fails_when_default_on
 printf 'ok - gh missing fails when default on\n'

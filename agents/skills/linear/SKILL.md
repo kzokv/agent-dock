@@ -26,7 +26,7 @@ If any MCP call fails because Linear MCP is not connected, pause and set it up:
 1. Add the Linear MCP:
    - `codex mcp add linear --url https://mcp.linear.app/mcp`
 2. Enable remote MCP client:
-   - Set `[features].rmcp_client = true` in `config.toml`, **or** run `codex --enable rmcp_client`
+   - Set `[features].rmcp_client = true` in `config.base.toml` (shared) or `config.local.toml` (machine-local), then run onboarding to regenerate `config.toml`, **or** run `codex --enable rmcp_client`
 3. Log in with OAuth:
    - `codex mcp login linear`
 
