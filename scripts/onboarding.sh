@@ -33,7 +33,8 @@ print_help() {
   cat <<EOF_HELP
 Description:
   Link this repo to ~/.codex (or override target), migrate user skills to ~/.codex/agents/skills,
-  maintain ~/.agents/skills symlink, regenerate config.toml from config.base.toml + config.local.toml,
+  maintain ~/.agents/skills symlink, populate ~/.claude/skills with per-skill symlinks,
+  regenerate config.toml from config.base.toml + config.local.toml,
   bootstrap GitHub CLI auth, and install a codex-net launcher for network-enabled sessions.
 
 Usage: ${SCRIPT_PATH} [OPTIONS]
@@ -90,6 +91,8 @@ agents_home="$HOME/.agents"
 agents_skills_link="$agents_home/skills"
 codex_skills_dir="$codex_home/agents/skills"
 legacy_skills_dir="$codex_home/skills"
+claude_home="$HOME/.claude"
+claude_skills_dir="$claude_home/skills"
 launcher_bin_dir="${XDG_BIN_HOME:-$HOME/.local/bin}"
 codex_net_launcher="$launcher_bin_dir/codex-net"
 
@@ -298,6 +301,38 @@ ensure_agents_skills_link() {
   ln -s "$codex_skills_dir" "$agents_skills_link"
 }
 
+ensure_claude_skills_links() {
+  mkdir -p "$claude_skills_dir"
+
+  shopt -s nullglob
+  local skill_path skill_name link_path rel_target
+  for skill_path in "$codex_skills_dir"/*/; do
+    skill_name="$(basename "$skill_path")"
+    link_path="$claude_skills_dir/$skill_name"
+    rel_target="../../.agents/skills/$skill_name"
+
+    if [ -L "$link_path" ]; then
+      local current_target
+      current_target="$(readlink "$link_path")"
+      if [ "$current_target" = "$rel_target" ]; then
+        log "Claude skill symlink already correct: $link_path -> $current_target"
+        continue
+      fi
+      log "Claude skill symlink points elsewhere; replacing: $link_path"
+      rm "$link_path"
+    elif [ -e "$link_path" ]; then
+      local backup_path
+      backup_path="${link_path}.backup.$timestamp"
+      log "Found existing path at $link_path; backing it up to: $backup_path"
+      mv "$link_path" "$backup_path"
+    fi
+
+    log "Creating Claude skill symlink: $link_path -> $rel_target"
+    ln -s "$rel_target" "$link_path"
+  done
+  shopt -u nullglob
+}
+
 log "Starting onboarding"
 log "Repo root: $repo_root"
 log "Target symlink: $codex_home -> $repo_root"
@@ -336,6 +371,7 @@ fi
 
 migrate_legacy_skills
 ensure_agents_skills_link
+ensure_claude_skills_links
 
 log "Upserting machine-local trust settings in: $config_local"
 ensure_repo_trust_block
