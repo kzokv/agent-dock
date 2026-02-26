@@ -85,5 +85,3 @@ model = "gpt-5-codex-mini"
 reasoning_effort = "medium"
 execution = "sub"
 
-[projects."/Users/keithc/00.work/00.repo/github.com/kzokv/codex-home"]
-trust_level = "trusted"

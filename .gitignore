@@ -13,8 +13,11 @@ shell_snapshots/
 # Runtime state and caches
 history.jsonl
 models_cache.json
+version.json
 .codex-global-state.json
 .personality_migration
 
 # Local environment
 AGENTS.md
+config.local.toml
+config.toml
