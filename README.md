@@ -56,6 +56,7 @@ Onboarding installs `codex-net` in `$XDG_BIN_HOME` (default: `~/.local/bin`) and
 - back up an existing target path (`~/.codex` by default) before creating the symlink
 - migrate legacy user skills from `~/.codex/skills` to `~/.codex/agents/skills` (one time)
 - maintain `$HOME/.agents/skills -> ~/.codex/agents/skills`
+- populate `$HOME/.claude/skills` with per-skill symlinks that reference `$HOME/.agents/skills` so Claude-based helpers can discover the same skills
 - upsert machine-local trust for this repo by rewriting only its `[projects."…"]` block in `config.local.toml`
 - regenerate `config.toml` from `config.base.toml` + `config.local.toml`
 - verify GitHub CLI auth and run `gh auth login -h github.com` when needed so agent sessions can re-use the tracker login state
