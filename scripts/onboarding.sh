@@ -185,7 +185,33 @@ exec codex --sandbox danger-full-access -a never --search -c shell_environment_p
 
 ensure_gh_token_secret() {
   if ! command -v gh >/dev/null 2>&1; then
-    die "GitHub CLI ('gh') is required for onboarding auth bootstrap. Install gh or rerun with --skip-gh-auth."
+    if command -v docker >/dev/null 2>&1; then
+      log "GitHub CLI ('gh') not found but Docker is available."
+      if [ -t 0 ]; then
+        printf "Do you want to use the Docker-based gh fallback? [y/N] "
+        read -r response
+        if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+          local wrapper_script="$repo_root/agents/skills/git-gh-docker-fallback/scripts/enable_wrappers.sh"
+          if [ -x "$wrapper_script" ]; then
+            local has_native_git=0
+            if command -v git >/dev/null 2>&1; then has_native_git=1; fi
+
+            eval "$("$wrapper_script")"
+
+            if [ "$has_native_git" -eq 1 ]; then unset -f git || true; fi
+            log "Enabled Docker-based gh wrapper"
+          else
+            die "Wrapper script not found or not executable: $wrapper_script"
+          fi
+        else
+          die "GitHub CLI ('gh') is required. Install gh or rerun with --skip-gh-auth."
+        fi
+      else
+        die "GitHub CLI ('gh') is required (non-interactive). Install gh or rerun with --skip-gh-auth."
+      fi
+    else
+      die "GitHub CLI ('gh') is required for onboarding auth bootstrap. Install gh or rerun with --skip-gh-auth."
+    fi
   fi
 
   if gh auth status >/dev/null 2>&1; then
