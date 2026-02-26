@@ -38,6 +38,17 @@ Use a custom Codex home target:
 ./scripts/onboarding.sh /path/to/codex-home
 ```
 
+If you want to use `gh` from Codex agent sessions, run onboarding so it validates GitHub CLI auth and installs the
+network-enabled helper, then launch the helper instead of typing the full `codex --sandbox …` command:
+
+```bash
+./scripts/onboarding.sh
+codex-net
+```
+
+Onboarding installs `codex-net` in `$XDG_BIN_HOME` (default: `~/.local/bin`) and warns if that directory is not on your
+`PATH`.
+
 ## Onboarding behavior
 
 `./scripts/onboarding.sh` will:
@@ -47,9 +58,17 @@ Use a custom Codex home target:
 - maintain `$HOME/.agents/skills -> ~/.codex/agents/skills`
 - upsert machine-local trust for this repo by rewriting only its `[projects."…"]` block in `config.local.toml`
 - regenerate `config.toml` from `config.base.toml` + `config.local.toml`
+- verify GitHub CLI auth and run `gh auth login -h github.com` when needed so agent sessions can re-use the tracker login state
+- install a `codex-net` launcher (in `$XDG_BIN_HOME` or `~/.local/bin`) so you can start network-enabled sessions without manually typing the sandbox flags
 - fail fast with non-zero exit when `config.base.toml` is missing
 
 Re-running onboarding is idempotent and preserves unrelated local config.
+
+To skip GitHub auth/bootstrap (for CI or non-interactive contexts), run:
+
+```bash
+./scripts/onboarding.sh --skip-gh-auth
+```
 
 ## Config model
 

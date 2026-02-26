@@ -14,6 +14,36 @@ Enable local commit-message enforcement immediately after cloning:
 
 This configures `core.hooksPath=.githooks` so local commits are validated by `.githooks/commit-msg`.
 
+## 1.1 GitHub CLI auth for agent workflows
+
+`./scripts/onboarding.sh` validates your `gh` CLI auth, runs `gh auth login -h github.com` when required, and installs the `codex-net` helper so you can launch network-enabled sessions without typing long sandbox flags. The helper lives under `$XDG_BIN_HOME` (default `~/.local/bin`) and onboarding will warn if that directory is not on your `PATH`.
+
+Once onboarding succeeds, use:
+
+```bash
+codex-net
+```
+
+instead of manually invoking `codex --sandbox …`.
+
+For automated or CI-style environments where you cannot complete GitHub auth interactively, rerun onboarding with:
+
+```bash
+./scripts/onboarding.sh --skip-gh-auth
+```
+
+Verify auth state with:
+
+```bash
+gh auth status
+```
+
+Security rules:
+
+- never print/paste raw tokens into logs, PRs, or chat
+- if a token is exposed, revoke and rotate immediately
+- keep token scopes minimal for required automation tasks
+
 ## 2. Commit message rules
 
 Commits must use:
