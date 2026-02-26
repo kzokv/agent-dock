@@ -1,0 +1,4 @@
+interface:
+  display_name: "Script Automation"
+  short_description: "Create robust shell, AppleScript, PowerShell, and batch scripts."
+  default_prompt: "Use $script-automation to create a non-interactive cross-platform automation script with strict help and argument parsing."

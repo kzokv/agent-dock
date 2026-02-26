@@ -16,8 +16,17 @@ models_cache.json
 version.json
 .codex-global-state.json
 .personality_migration
+state_*.sqlite
+state_*.sqlite-shm
+state_*.sqlite-wal
+__pycache__/
+*.pyc
+*.pyo
 
 # Local environment
-AGENTS.md
 config.local.toml
 config.toml
+
+# Auto generated system skills
+skills/.system/
+agents/skills/.system/

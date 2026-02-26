@@ -1,49 +1,43 @@
 # Engineering Agent Team
 
-This directory defines a consolidated multi-agent engineering model with 9 canonical roles and compatibility aliases for legacy agent IDs.
+This directory defines a canonical multi-agent model with implementation roles plus function-based reviewer overlays.
 
 ## Core Documents
 
-- `00-team-charter.md`: Team-wide mission, workflow, and guardrails.
-- `role-topology.md`: Canonical role map, alias map, and capability ownership.
+- `00-team-charter.md`: Team-wide mission, workflow, and governance.
+- `role-topology.md`: Canonical role map and capability ownership.
 - `skills-matrix.md`: Capability-tiered skill policy and role bindings.
 - `review-checklist.md`: Shared review checklist and severity policy.
 
 ## Canonical Contracts
 
-- `role-product-delivery-manager.md`
-- `role-system-architect.md`
-- `role-staff-frontend.md`
-- `role-backend-data-engineer.md`
-- `role-staff-qa.md`
-- `role-platform-automation.md`
+- `role-architect.md`
+- `role-product-manager.md`
+- `role-project-manager.md`
+- `role-frontend-engineer.md`
+- `role-backend-engineer.md`
+- `role-qa-engineer.md`
+- `role-ui-ux-designer.md`
+- `role-devops.md`
 - `role-technical-writer.md`
-- `role-code-review-architect.md`
-- `role-delivery-strategist.md`
-
-## Compatibility Alias Files
-
-- `01-product-manager.md` and `09-project-manager.md` -> `role-product-delivery-manager.md`
-- `02-system-architect.md` -> `role-system-architect.md`
-- `03-staff-frontend-developer.md` -> `role-staff-frontend.md`
-- `04-staff-backend-developer.md` and `05-db-designer.md` -> `role-backend-data-engineer.md`
-- `06-staff-quality-assurance.md` -> `role-staff-qa.md`
-- `07-senior-devops.md` and `10-script-developer.md` -> `role-platform-automation.md`
-- `08-technical-writer.md` -> `role-technical-writer.md`
-- `11-code-review-architect.md` -> `role-code-review-architect.md`
-- `12-commit-strategist.md` and `13-pr-strategist.md` -> `role-delivery-strategist.md`
+- `role-git-orchestrator.md`
+- `role-frontend-reviewer.md`
+- `role-backend-reviewer.md`
+- `role-qa-reviewer.md`
+- `role-database-reviewer.md`
+- `role-design-reviewer.md`
 
 ## Operating Defaults
 
 - Product context: Web SaaS first, with extensions for mobile and standalone apps.
 - Workflow of record: GitHub Issues/PRs/Actions.
 - Secondary systems: Jira+Confluence and Linear+Notion as optional sync layers.
-- Governance: Security and architecture checks are independently enforced by Code Review Architect.
+- Governance: `architect` + domain reviewers are final blocker gates.
+- Git operations: `git-orchestrator` executes commit/branch/PR/release-note workflows.
 
 ## Validation
 
-- `config.base.toml` defines the tracked agent alias map; onboarding regenerates runtime `config.toml` from base + machine-local `config.local.toml` (shared edits in base, machine-local edits in local). Do not edit `config.toml` directly—the onboarding script owns it.
-- Keep config-layout migrations atomic and run `scripts/check-config-migration.sh` to verify tracked/ignored config state before commit.
-- Run `scripts/test-onboarding.sh` when changing onboarding or config-handling scripts to exercise symlink, trust, and config regeneration behavior.
-- Canonical role contracts own skills and boundaries; alias files stay short.
-- `scripts/validate-role-skill-topology.py` verifies skills, capability ownership, and skill metadata hygiene.
+- `config.base.toml` defines the tracked agent catalog; onboarding regenerates runtime `config.toml` from base + machine-local `config.local.toml`.
+- Do not edit `config.toml` directly.
+- Run `scripts/test-onboarding.sh` when changing onboarding/config scripts.
+- Run `scripts/validate-role-skill-topology.py` after role/skills changes.

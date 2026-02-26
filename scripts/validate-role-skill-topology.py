@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 AGENTS_DIR = ROOT / "agents"
-SKILLS_DIR = ROOT / "skills"
+SKILLS_DIR = AGENTS_DIR / "skills"
 
 
 def read_text(path: Path) -> str:
@@ -74,14 +74,14 @@ def validate_role_skills(roles: dict[str, Path]) -> list[str]:
             if external:
                 errors.append(f"{path}: required skill marked external: {s}")
             if not (SKILLS_DIR / s).is_dir():
-                errors.append(f"{path}: required skill directory missing: skills/{s}")
+                errors.append(f"{path}: required skill directory missing: agents/skills/{s}")
 
         for s, external, _ in optional:
             if external:
                 continue
             if not (SKILLS_DIR / s).is_dir():
                 errors.append(
-                    f"{path}: optional skill missing and not marked external: skills/{s}"
+                    f"{path}: optional skill missing and not marked external: agents/skills/{s}"
                 )
 
     return errors
@@ -161,6 +161,16 @@ def validate_skill_docs_hygiene() -> list[str]:
     return errors
 
 
+def validate_repo_skill_policy() -> list[str]:
+    errors: list[str] = []
+    disallowed_repo_skills = ROOT / ".agents" / "skills"
+    if disallowed_repo_skills.exists():
+        errors.append(
+            f"{disallowed_repo_skills}: disallowed in codex-home; use user-level agents/skills instead"
+        )
+    return errors
+
+
 def main() -> int:
     roles, role_errs = parse_canonical_roles()
     errors: list[str] = []
@@ -168,6 +178,7 @@ def main() -> int:
     errors.extend(validate_role_skills(roles))
     errors.extend(validate_capability_ownership(roles))
     errors.extend(validate_skill_docs_hygiene())
+    errors.extend(validate_repo_skill_policy())
 
     if errors:
         print("Validation failed:")

@@ -12,8 +12,8 @@ Deliver secure, maintainable, and valuable software through explicit ownership b
 
 ## Role Model
 
-- Canonical role model: 9 logical roles defined in `agents/role-topology.md`.
-- Compatibility mode: legacy agent IDs remain callable as aliases.
+- Canonical model: implementation/coordination roles plus reviewer overlays defined in `agents/role-topology.md`.
+- Immediate cutover: no legacy alias IDs are part of the operating model.
 - Ownership rule: each capability has exactly one primary owner.
 
 ## Core Principles
@@ -26,37 +26,23 @@ Deliver secure, maintainable, and valuable software through explicit ownership b
 
 ## Shared Workflow
 
-1. Product Delivery defines intent, scope, and measurable acceptance.
-2. System Architect defines boundaries, constraints, and migration intent.
-3. Frontend and Backend+Data implement with clear contracts.
-4. Staff QA enforces risk-based quality gates in CI.
-5. Platform Automation validates release safety and automation reliability.
-6. Code Review Architect independently enforces cross-cutting governance.
+1. Product and project managers define intent, scope, and measurable acceptance.
+2. Architect defines boundaries, constraints, and migration intent.
+3. Frontend/backend/UI-UX roles implement with clear contracts.
+4. QA and DevOps enforce risk-based quality and release gates.
+5. Reviewer overlays enforce domain-specific governance.
+6. Git Orchestrator executes commit/branch/PR and release-note flow.
 7. Technical Writer updates user and engineering docs.
-8. Delivery Strategist ensures commit/PR readiness quality.
-
-## Shared Quality Gates
-
-- Acceptance criteria traceability from requirement to tests.
-- Security and architecture checks for changed boundaries.
-- Contract compatibility checks for APIs and data boundaries.
-- Performance and reliability checks against declared targets.
-- Review checklist completion with severity-based merge policy.
 
 ## Merge Policy
 
 - Blockers must be fixed before merge.
 - Major findings require resolution or explicit written exception.
 - Exceptions require owner, reason, mitigation, and expiry date.
-
-## Toolchain Defaults
-
-- Primary system of record: GitHub Issues, Pull Requests, and Actions.
-- Optional sync systems: Jira+Confluence and Linear+Notion.
-- Optional sync must not override GitHub state.
+- Architect + domain reviewers are final blocker authorities.
 
 ## Skills Baseline
 
 - Universal baseline for all canonical roles: `openai-docs`.
 - Security/Governance skills are required only for roles that own governance functions.
-- GitHub Ops skills are required only for delivery, QA, platform, and review roles.
+- GitHub Ops skills are required for QA, DevOps, reviewers, and Git Orchestrator.

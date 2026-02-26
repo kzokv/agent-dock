@@ -3,16 +3,18 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-INSTALLER="${REPO_ROOT}/skills/.system/skill-installer/scripts/install-skill-from-github.py"
-DEST="${REPO_ROOT}/skills"
+INSTALLER="${REPO_ROOT}/agents/skills/.system/skill-installer/scripts/install-skill-from-github.py"
+DEST="${REPO_ROOT}/agents/skills"
 
 if [[ ! -f "${INSTALLER}" ]]; then
   echo "Installer not found: ${INSTALLER}" >&2
   exit 1
 fi
 
+mkdir -p "${DEST}"
+
 # Required curated skills across canonical roles.
-# External optional accelerators are intentionally excluded.
+# Optional external accelerators are intentionally excluded.
 REQUIRED_SKILLS=(
   openai-docs
   security-best-practices

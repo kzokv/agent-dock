@@ -1,6 +1,6 @@
 # Review Checklist
 
-This checklist is used by the Code Review Architect and supports all reviewers.
+This checklist is used by domain reviewers and architect governance.
 
 ## Severity Levels
 
@@ -8,6 +8,13 @@ This checklist is used by the Code Review Architect and supports all reviewers.
 - `Major`: Fix before merge unless a written exception is approved.
 - `Minor`: Should be fixed soon and tracked.
 - `Nit`: Non-blocking improvement.
+
+## Review Workflow
+
+1. Assess change risk and affected boundaries.
+2. Apply this checklist with domain-specific depth.
+3. Classify findings by severity and confidence.
+4. Issue a merge decision with explicit remediation guidance.
 
 ## Security Checks
 
@@ -17,48 +24,35 @@ This checklist is used by the Code Review Architect and supports all reviewers.
 - Dependency and configuration changes do not reduce baseline security.
 - Threat surface changes are called out in PR description.
 
-## DRY and Reuse
-
-- No unnecessary duplication of business logic.
-- Shared utilities are extracted when repeated patterns emerge.
-- Duplicate tests are reduced using fixtures and helper functions.
-
-## SOLID and Design
-
-- Single responsibility for modules and services.
-- Open/closed principle respected through extension points, not forks.
-- Liskov substitution and interface compatibility maintained.
-- Interface segregation keeps APIs focused and minimal.
-- Dependency inversion is used for pluggable infrastructure concerns.
-
-## Structure and Decoupling
+## Architecture and Design Checks
 
 - Module boundaries are explicit and respected.
 - Dependency direction is one-way and avoids cycles.
-- Composition is favored over inheritance for feature behavior.
 - Public interfaces are stable, minimal, and documented.
+- UI/UX changes preserve interaction consistency and accessibility intent.
+- Schema and migration changes preserve compatibility and rollback safety.
 
-## Test Quality
+## Test and Operability Checks
 
 - Unit, integration, and end-to-end coverage match change risk.
 - Negative paths and error handling are exercised.
-- Flaky tests are quarantined with issue tracking and owner.
 - CI gates prevent silent regression.
-
-## Performance and Reliability
-
-- New hot paths have basic cost and latency awareness.
-- Idempotency, retries, and timeout behavior are explicit.
-- Failure modes and rollback paths are documented for risky changes.
-
-## Documentation and Operability
-
-- Architecture and API docs are updated for public behavior changes.
-- Runbook changes are included for operationally relevant updates.
-- Release notes include user-impacting behavior changes.
+- Rollback and recovery expectations are documented for risky releases.
 
 ## Merge Rules
 
 - Any unresolved `Blocker` blocks merge.
 - Security `Major` findings default to block unless approved exception exists.
-- Exception record must include owner, risk, mitigation, and expiration date.
+- Final blocker gate is held by architect + relevant domain reviewers.
+
+## Exception Policy
+
+- Exceptions are allowed only for `Major` findings, never for `Blocker`.
+- Every exception must include owner, reason, mitigation, and expiry date.
+- Expired exceptions are treated as unresolved findings.
+
+## Escalation Triggers
+
+- Critical security flaw in a release-bound branch.
+- Repeated unresolved `Major` findings across the same area.
+- High-risk coupling increase without an approved mitigation plan.

@@ -5,83 +5,62 @@ personality = "pragmatic"
 [features]
 multi_agent = true
 
-# logical_role = "role-system-architect"
 [agents.architect]
-model = "gpt-5.3-codex"
-reasoning_effort = "high"
-execution = "main"
+description = "Cross-cutting system architecture owner and governance gate."
+config_file = "agents-config/architect.toml"
 
-# logical_role = "role-code-review-architect"
-[agents."code-review-architect"]
-model = "gpt-5.3-codex"
-reasoning_effort = "high"
-sandbox_mode = "read-only"
-execution = "sub"
-
-# logical_role = "role-staff-frontend"
-[agents."staff-frontend"]
-model = "gpt-5.3-codex"
-reasoning_effort = "high"
-execution = "main"
-
-# logical_role = "role-backend-data-engineer"
-[agents."staff-backend"]
-model = "gpt-5.3-codex"
-reasoning_effort = "high"
-execution = "main"
-
-# logical_role = "role-platform-automation"
-[agents."senior-devops"]
-model = "gpt-5.3-codex"
-reasoning_effort = "high"
-execution = "main"
-
-# logical_role = "role-staff-qa"
-[agents."staff-qa"]
-model = "gpt-5.3-codex"
-reasoning_effort = "high"
-# default to delegated execution; switch to "main" for active test/debug runs
-execution = "sub"
-
-# logical_role = "role-backend-data-engineer"
-[agents."db-designer"]
-model = "gpt-5-codex-mini"
-reasoning_effort = "medium"
-execution = "sub"
-
-# logical_role = "role-product-delivery-manager"
 [agents."product-manager"]
-model = "gpt-5-codex-mini"
-reasoning_effort = "medium"
-execution = "sub"
+description = "Owns product intent, scope clarity, and acceptance framing."
+config_file = "agents-config/product-manager.toml"
 
-# logical_role = "role-product-delivery-manager"
 [agents."project-manager"]
-model = "gpt-5-codex-mini"
-reasoning_effort = "medium"
-execution = "sub"
+description = "Owns execution coordination, sequencing, and delivery tracking."
+config_file = "agents-config/project-manager.toml"
 
-# logical_role = "role-technical-writer"
+[agents."frontend-engineer"]
+description = "Implements frontend behavior, accessibility, and UI quality."
+config_file = "agents-config/frontend-engineer.toml"
+
+[agents."backend-engineer"]
+description = "Implements backend domain logic, APIs, and data workflows."
+config_file = "agents-config/backend-engineer.toml"
+
+[agents."qa-engineer"]
+description = "Builds and executes risk-based validation strategies and quality gates."
+config_file = "agents-config/qa-engineer.toml"
+
+[agents."ui-ux-designer"]
+description = "Owns UI/UX specs, design-system guidance, and interaction quality."
+config_file = "agents-config/ui-ux-designer.toml"
+
+[agents.devops]
+description = "Owns CI/CD reliability, infrastructure automation, and release safety."
+config_file = "agents-config/devops.toml"
+
 [agents."technical-writer"]
-model = "gpt-5-codex-mini"
-reasoning_effort = "medium"
-execution = "sub"
+description = "Owns end-user and engineering documentation quality."
+config_file = "agents-config/technical-writer.toml"
 
-# logical_role = "role-platform-automation"
-[agents."script-developer"]
-model = "gpt-5-codex-mini"
-reasoning_effort = "medium"
-execution = "main"
+[agents."git-orchestrator"]
+description = "Executes branch/commit/PR/release-note workflow without overriding governance blockers."
+config_file = "agents-config/git-orchestrator.toml"
 
-# logical_role = "role-delivery-strategist"
-[agents."commit-strategist"]
-model = "gpt-5-codex-mini"
-reasoning_effort = "medium"
-execution = "sub"
+[agents."frontend-reviewer"]
+description = "Reviews frontend architecture, performance, and accessibility risks."
+config_file = "agents-config/frontend-reviewer.toml"
 
-# logical_role = "role-delivery-strategist"
-[agents."pr-strategist"]
-model = "gpt-5-codex-mini"
-reasoning_effort = "medium"
-execution = "sub"
+[agents."backend-reviewer"]
+description = "Reviews backend contracts, reliability, and maintainability risks."
+config_file = "agents-config/backend-reviewer.toml"
 
+[agents."qa-reviewer"]
+description = "Reviews test strategy quality, coverage risks, and CI signal health."
+config_file = "agents-config/qa-reviewer.toml"
+
+[agents."database-reviewer"]
+description = "Reviews schema design, migration safety, and data integrity risks."
+config_file = "agents-config/database-reviewer.toml"
+
+[agents."design-reviewer"]
+description = "Reviews UI/UX fidelity, interaction consistency, and usability risks."
+config_file = "agents-config/design-reviewer.toml"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git/GH Docker Fallback"
+  short_description: "Fallback wrappers for git/gh via Docker when native binaries are unavailable."
+  default_prompt: "Use $git-gh-docker-fallback to enable Docker-backed git/gh wrappers in this shell because native binaries are missing."
