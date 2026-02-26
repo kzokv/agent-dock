@@ -28,5 +28,4 @@ config.local.toml
 config.toml
 
 # Auto generated system skills
-skills/.system/
-agents/skills/.system/
+**/system/

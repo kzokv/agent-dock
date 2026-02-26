@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 codex_home_override=""
+skip_gh_auth=0
 SCRIPT_PATH="${0##*/}"
 
 log() {
@@ -32,13 +33,15 @@ print_help() {
   cat <<EOF_HELP
 Description:
   Link this repo to ~/.codex (or override target), migrate user skills to ~/.codex/agents/skills,
-  maintain ~/.agents/skills symlink, and regenerate config.toml from config.base.toml + config.local.toml.
+  maintain ~/.agents/skills symlink, regenerate config.toml from config.base.toml + config.local.toml,
+  bootstrap GitHub CLI auth, and install a codex-net launcher for network-enabled sessions.
 
 Usage: ${SCRIPT_PATH} [OPTIONS]
 
 Options:
   -h, --help          Show this help message and exit (optional)
   --codex-home PATH   Override the ~/.codex symlink path (optional, default: ~/.codex)
+  --skip-gh-auth      Skip GitHub auth bootstrap and secret-file write (optional, default: off)
 EOF_HELP
 }
 
@@ -58,6 +61,10 @@ while [ $# -gt 0 ]; do
       ;;
     --codex-home=*)
       codex_home_override="${1#*=}"
+      shift
+      ;;
+    --skip-gh-auth)
+      skip_gh_auth=1
       shift
       ;;
     -*)
@@ -83,6 +90,8 @@ agents_home="$HOME/.agents"
 agents_skills_link="$agents_home/skills"
 codex_skills_dir="$codex_home/agents/skills"
 legacy_skills_dir="$codex_home/skills"
+launcher_bin_dir="${XDG_BIN_HOME:-$HOME/.local/bin}"
+codex_net_launcher="$launcher_bin_dir/codex-net"
 
 canonical_path() {
   local path="$1"
@@ -136,8 +145,68 @@ generate_runtime_config() {
   mv "$tmp_config" "$config_file"
 }
 
+ensure_dir_mode() {
+  local dir="$1"
+  local mode="$2"
+  mkdir -p "$dir"
+  chmod "$mode" "$dir"
+}
+
+write_executable_file_atomic() {
+  local target_path="$1"
+  local content="$2"
+  local tmp_file
+
+  tmp_file="$(mktemp)"
+  printf '%s\n' "$content" > "$tmp_file"
+  chmod 755 "$tmp_file"
+  mv "$tmp_file" "$target_path"
+  chmod 755 "$target_path"
+}
+
+install_codex_net_launcher() {
+  local launcher_content
+  launcher_content='#!/usr/bin/env bash
+set -euo pipefail
+exec codex --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all'
+
+  mkdir -p "$launcher_bin_dir"
+  write_executable_file_atomic "$codex_net_launcher" "$launcher_content"
+  log "Installed Codex network-enabled launcher: $codex_net_launcher"
+
+  case ":$PATH:" in
+    *":$launcher_bin_dir:"*) ;;
+    *)
+      log "Launcher directory is not on PATH. Add this to your shell profile:"
+      log "  export PATH=\"$launcher_bin_dir:\$PATH\""
+      ;;
+  esac
+}
+
+ensure_gh_token_secret() {
+  if ! command -v gh >/dev/null 2>&1; then
+    die "GitHub CLI ('gh') is required for onboarding auth bootstrap. Install gh or rerun with --skip-gh-auth."
+  fi
+
+  if gh auth status >/dev/null 2>&1; then
+    log "GitHub CLI auth is already valid"
+  else
+    log "GitHub CLI auth is not valid; running: gh auth login -h github.com"
+    gh auth login -h github.com
+    gh auth status >/dev/null 2>&1 || die "GitHub CLI auth remains invalid after login"
+  fi
+}
+
 migrate_legacy_skills() {
   if [ ! -d "$legacy_skills_dir" ]; then
+    return 0
+  fi
+
+  local legacy_canonical repo_legacy_canonical
+  legacy_canonical="$(canonical_path "$legacy_skills_dir" 2>/dev/null || true)"
+  repo_legacy_canonical="$(canonical_path "$repo_root/skills" 2>/dev/null || true)"
+  if [ -n "$legacy_canonical" ] && [ -n "$repo_legacy_canonical" ] && [ "$legacy_canonical" = "$repo_legacy_canonical" ]; then
+    log "Legacy skills path resolves to repo-managed skills; skipping migration: $legacy_skills_dir"
     return 0
   fi
 
@@ -249,5 +318,14 @@ log "Wrote machine-local trust settings to: $config_local"
 log "Generating runtime config from base + local: $config_base + $config_local -> $config_file"
 generate_runtime_config
 log "Generated runtime config: $config_file"
+
+if [ "$skip_gh_auth" = "1" ]; then
+  log "Skipping GitHub auth bootstrap (--skip-gh-auth)"
+else
+  log "Bootstrapping GitHub auth and agent token secret"
+  ensure_gh_token_secret
+fi
+
+install_codex_net_launcher
 
 log "Onboarding complete"

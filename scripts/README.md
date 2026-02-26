@@ -9,9 +9,11 @@
   - `generate_runtime_config` merges `config.base.toml` + `config.local.toml` into generated `config.toml`.
   - `migrate_legacy_skills` performs one-time migration from legacy `~/.codex/skills` to `~/.codex/agents/skills`.
   - `ensure_agents_skills_link` maintains `$HOME/.agents/skills -> ~/.codex/agents/skills` with backup-then-replace behavior.
+  - `ensure_gh_token_secret` validates `gh` login and runs `gh auth login -h github.com` when needed so spawned sessions share the verified login state.
+  - `--skip-gh-auth` disables GH bootstrap for non-interactive or CI-style runs.
 
 - [`scripts/test-onboarding.sh`](test-onboarding.sh)
-  - Validates onboarding idempotency, config generation, skills-link creation, and legacy skills migration.
+  - Validates onboarding idempotency, config generation, skills-link creation, legacy skills migration, GH auth bootstrap behavior, and secret-file safety constraints.
   - Supports `--keep-fixtures` or `KEEP_FIXTURES=1` to keep fixture directories for debugging.
   - Requires `rg` to be available in PATH.
 
