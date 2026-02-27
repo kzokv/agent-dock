@@ -10,11 +10,13 @@
   - `migrate_legacy_skills` performs one-time migration from legacy `~/.codex/skills` to `~/.codex/agents/skills`.
   - `ensure_agents_skills_link` maintains `$HOME/.agents/skills -> ~/.codex/agents/skills` with backup-then-replace behavior.
   - `ensure_claude_skills_links` populates `$HOME/.claude/skills` with one symlink per skill that points back to the shared `$HOME/.agents/skills` tree.
+  - `install_cursor_role_loader` copies `<repo>/.platforms/cursor/agents/codex-role-loader.md` as a regular file into `<cursor_home>/agents/` (default: `~/.cursor/agents/`). Overwrites any existing file and replaces stale symlinks at the destination.
   - `ensure_gh_token_secret` validates `gh` login and runs `gh auth login -h github.com` when needed so spawned sessions share the verified login state.
   - `--skip-gh-auth` disables GH bootstrap for non-interactive or CI-style runs.
+  - `--cursor-home PATH` overrides the Cursor home directory used for the role-loader installation (default: `~/.cursor`). This option accepts any writable path; run onboarding as the target user and avoid privileged system paths unless explicitly intended.
 
 - [`scripts/test-onboarding.sh`](test-onboarding.sh)
-  - Validates onboarding idempotency, config generation, skills-link creation, legacy skills migration, GH auth bootstrap behavior, and secret-file safety constraints.
+  - Validates onboarding idempotency, config generation, skills-link creation, legacy skills migration, GH auth bootstrap behavior, secret-file safety constraints, and Cursor role-loader behavior (copy, overwrite, symlink replacement, `--cursor-home` override, idempotency).
   - Supports `--keep-fixtures` or `KEEP_FIXTURES=1` to keep fixture directories for debugging.
   - Requires `rg` to be available in PATH.
 

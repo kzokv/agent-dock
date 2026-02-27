@@ -16,7 +16,7 @@ This configures `core.hooksPath=.githooks` so local commits are validated by `.g
 
 ## 1.1 GitHub CLI auth for agent workflows
 
-`./scripts/onboarding.sh` validates your `gh` CLI auth, runs `gh auth login -h github.com` when required, and installs the `codex-net` helper so you can launch network-enabled sessions without typing long sandbox flags. The helper lives under `$XDG_BIN_HOME` (default `~/.local/bin`) and onboarding will warn if that directory is not on your `PATH`.
+`./scripts/onboarding.sh` validates your `gh` CLI auth, runs `gh auth login -h github.com` when required, and installs the `codex-net` helper so you can launch network-enabled sessions without typing long sandbox flags. The helper lives under `$XDG_BIN_HOME` (default `~/.local/bin`) and onboarding will warn if that directory is not on your `PATH`. Onboarding also copies the Codex role-loader agent into `~/.cursor/agents` so Cursor can load role profiles from `~/.codex/agents`; use `--cursor-home PATH` to target a custom Cursor directory.
 
 Once onboarding succeeds, use:
 

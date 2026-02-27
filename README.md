@@ -13,6 +13,7 @@ Tracked:
 - `agents/skills/`
 - `agents-config/`
 - `automations/`
+- `.platforms/cursor/agents/` — Cursor IDE agent definitions (e.g., `codex-role-loader.md`), installed to `~/.cursor/agents` by onboarding
 - `scripts/`
 - `config.base.toml`
 
@@ -59,16 +60,19 @@ Onboarding installs `codex-net` in `$XDG_BIN_HOME` (default: `~/.local/bin`) and
 - populate `$HOME/.claude/skills` with per-skill symlinks that reference `$HOME/.agents/skills` so Claude-based helpers can discover the same skills
 - upsert machine-local trust for this repo by rewriting only its `[projects."…"]` block in `config.local.toml`
 - regenerate `config.toml` from `config.base.toml` + `config.local.toml`
+- copy the Codex role-loader agent into `~/.cursor/agents` (or `--cursor-home` override) so Cursor can load role profiles from `~/.codex/agents`
 - verify GitHub CLI auth and run `gh auth login -h github.com` when needed so agent sessions can re-use the tracker login state
 - install a `codex-net` launcher (in `$XDG_BIN_HOME` or `~/.local/bin`) so you can start network-enabled sessions without manually typing the sandbox flags
 - fail fast with non-zero exit when `config.base.toml` is missing
 
 Re-running onboarding is idempotent and preserves unrelated local config.
 
-To skip GitHub auth/bootstrap (for CI or non-interactive contexts), run:
+Use `--skip-gh-auth` to skip GitHub auth (for CI or non-interactive contexts). Use `--cursor-home PATH` to install the role-loader to a custom Cursor directory (default: `~/.cursor`).
+`--cursor-home` accepts any writable path, so run onboarding as the target user and avoid privileged system paths unless explicitly intended.
 
 ```bash
 ./scripts/onboarding.sh --skip-gh-auth
+./scripts/onboarding.sh --cursor-home /path/to/cursor
 ```
 
 ## Config model
