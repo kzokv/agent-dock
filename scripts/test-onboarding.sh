@@ -10,7 +10,7 @@ print_help() {
   cat <<EOF_HELP
 Description:
   Run tests that validate scripts/onboarding.sh is non-destructive, idempotent, enforces user-level skill-link
-  policy, bootstraps GitHub auth, and installs a codex-net launcher.
+  policy, bootstraps GitHub auth, installs a codex-net launcher, and installs the Cursor role-loader.
 
 Usage: ${SCRIPT_PATH} [OPTIONS]
 
@@ -101,6 +101,16 @@ run_onboarding() {
   local fixture_repo="$2"
   local codex_home="$3"
   shift 3
+  local has_cursor_home=0
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      --cursor-home|--cursor-home=*) has_cursor_home=1; break ;;
+    esac
+  done
+  if [ "$has_cursor_home" -eq 0 ]; then
+    set -- --cursor-home "$fixture_home/.cursor" "$@"
+  fi
   HOME="$fixture_home" "$fixture_repo/scripts/onboarding.sh" "$codex_home" "$@"
 }
 
@@ -110,8 +120,11 @@ make_fixture() {
   fixture_roots+=("$fixture_root")
   local fixture_repo="$fixture_root/repo"
   mkdir -p "$fixture_repo/scripts"
+  mkdir -p "$fixture_repo/.platforms/cursor/agents"
   cp "$source_script" "$fixture_repo/scripts/onboarding.sh"
   chmod +x "$fixture_repo/scripts/onboarding.sh"
+  cp "$repo_root/.platforms/cursor/agents/codex-role-loader.md" \
+    "$fixture_repo/.platforms/cursor/agents/codex-role-loader.md"
   printf '%s\n' "$fixture_root"
 }
 
@@ -170,11 +183,12 @@ STUB_GH
 need_cmd rg
 need_cmd mktemp
 test_non_destructive_and_idempotent() {
-  local fixture_root fixture_repo fixture_home codex_home before_local after_local before_cfg after_cfg block_count
+  local fixture_root fixture_repo fixture_home codex_home before_local after_local before_cfg after_cfg block_count loader_dst
   fixture_root="$(make_fixture)"
   fixture_repo="$fixture_root/repo"
   fixture_home="$fixture_root/home"
   codex_home="$fixture_home/.codex"
+  loader_dst="$fixture_home/.cursor/agents/codex-role-loader.md"
   mkdir -p "$fixture_home" "$fixture_repo/agents/skills"
 
   cat > "$fixture_repo/config.base.toml" <<'BASE'
@@ -202,6 +216,7 @@ EOF_LOCAL
   assert_eq "$block_count" "1" "Project trust block should appear exactly once"
 
   assert_symlink_target_canonical "$fixture_home/.agents/skills" "$fixture_repo/agents/skills"
+  [ -f "$loader_dst" ] || fail "Expected codex-role-loader.md at $loader_dst after first onboarding run"
 
   before_local="$(cat "$fixture_repo/config.local.toml")"
   before_cfg="$(cat "$fixture_repo/config.toml")"
@@ -213,6 +228,7 @@ EOF_LOCAL
 
   assert_eq "$after_local" "$before_local" "Second onboarding run should not change config.local.toml"
   assert_eq "$after_cfg" "$before_cfg" "Second onboarding run should not change generated config.toml"
+  [ -f "$loader_dst" ] || fail "Expected codex-role-loader.md at $loader_dst after second onboarding run"
 
   if ls "$codex_home".symlink.backup.* >/dev/null 2>&1; then
     fail "No codex symlink backup should be created on idempotent re-run"
@@ -220,6 +236,30 @@ EOF_LOCAL
   if ls "$fixture_home/.agents/skills".symlink.backup.* >/dev/null 2>&1; then
     fail "No user skills backup should be created on idempotent re-run"
   fi
+}
+
+test_cursor_role_loader_destination_directory_fails() {
+  local fixture_root fixture_repo fixture_home codex_home cursor_home loader_dst output_file
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  cursor_home="$fixture_home/.cursor"
+  loader_dst="$cursor_home/agents/codex-role-loader.md"
+  output_file="$fixture_root/onboarding-directory-destination.log"
+
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills" "$loader_dst"
+  [ -d "$loader_dst" ] || fail "Precondition: expected directory at $loader_dst"
+
+  if run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" --skip-gh-auth >"$output_file" 2>&1; then
+    fail "Onboarding should fail when Cursor role-loader destination is a directory"
+  fi
+
+  assert_file_contains "$output_file" "Cursor role-loader destination exists as a directory"
 }
 
 test_missing_base_fails() {
@@ -431,6 +471,125 @@ BASE
   assert_file_contains "$launcher_path" 'exec codex --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all'
 }
 
+test_cursor_role_loader_copied() {
+  local fixture_root fixture_repo fixture_home codex_home cursor_home loader_dst
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  cursor_home="$fixture_home/.cursor"
+  loader_dst="$cursor_home/agents/codex-role-loader.md"
+
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills"
+  run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" \
+    --cursor-home "$cursor_home" --skip-gh-auth >/dev/null
+
+  [ -f "$loader_dst" ] || fail "Expected codex-role-loader.md at $loader_dst"
+  [ ! -L "$loader_dst" ] || fail "codex-role-loader.md must be a regular file, not a symlink"
+  assert_file_contains "$loader_dst" 'name: codex-role-loader'
+}
+
+test_cursor_role_loader_overwrite() {
+  local fixture_root fixture_repo fixture_home codex_home cursor_home loader_dst
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  cursor_home="$fixture_home/.cursor"
+  loader_dst="$cursor_home/agents/codex-role-loader.md"
+
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills" "$cursor_home/agents"
+  printf 'stale content\n' > "$loader_dst"
+
+  run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" \
+    --cursor-home "$cursor_home" --skip-gh-auth >/dev/null
+
+  [ -f "$loader_dst" ] || fail "Expected codex-role-loader.md at $loader_dst"
+  assert_file_contains "$loader_dst" 'name: codex-role-loader'
+  if rg -q --fixed-strings 'stale content' "$loader_dst"; then
+    fail "Stale content should have been overwritten"
+  fi
+}
+
+test_cursor_role_loader_symlink_replaced() {
+  local fixture_root fixture_repo fixture_home codex_home cursor_home loader_dst
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  cursor_home="$fixture_home/.cursor"
+  loader_dst="$cursor_home/agents/codex-role-loader.md"
+
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills" "$cursor_home/agents"
+  ln -s "$fixture_repo/.platforms/cursor/agents/codex-role-loader.md" "$loader_dst"
+  [ -L "$loader_dst" ] || fail "Precondition: expected symlink at $loader_dst"
+
+  run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" \
+    --cursor-home "$cursor_home" --skip-gh-auth >/dev/null
+
+  [ -f "$loader_dst" ] || fail "Expected codex-role-loader.md at $loader_dst"
+  [ ! -L "$loader_dst" ] || fail "Symlink should have been replaced with a regular file"
+}
+
+test_cursor_role_loader_idempotent() {
+  local fixture_root fixture_repo fixture_home codex_home cursor_home loader_dst before after
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  cursor_home="$fixture_home/.cursor"
+  loader_dst="$cursor_home/agents/codex-role-loader.md"
+
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills"
+  run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" \
+    --cursor-home "$cursor_home" --skip-gh-auth >/dev/null
+  before="$(cat "$loader_dst")"
+
+  run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" \
+    --cursor-home "$cursor_home" --skip-gh-auth >/dev/null
+  after="$(cat "$loader_dst")"
+
+  assert_eq "$after" "$before" "Second onboarding run should not change loader content"
+}
+
+test_cursor_home_override() {
+  local fixture_root fixture_repo fixture_home codex_home custom_cursor_home loader_dst
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  custom_cursor_home="$fixture_root/custom-cursor"
+  loader_dst="$custom_cursor_home/agents/codex-role-loader.md"
+
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills"
+  run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" \
+    --cursor-home "$custom_cursor_home" --skip-gh-auth >/dev/null
+
+  [ -f "$loader_dst" ] || fail "Expected codex-role-loader.md in overridden cursor home at $loader_dst"
+  [ ! -L "$loader_dst" ] || fail "codex-role-loader.md must be a regular file, not a symlink"
+  assert_file_contains "$loader_dst" 'name: codex-role-loader'
+}
+
 test_non_destructive_and_idempotent
 printf 'ok - non-destructive and idempotent\n'
 
@@ -463,5 +622,23 @@ printf 'ok - no token persistence\n'
 
 test_codex_net_launcher_installed
 printf 'ok - codex-net launcher installed\n'
+
+test_cursor_role_loader_copied
+printf 'ok - cursor role-loader copied as regular file\n'
+
+test_cursor_role_loader_overwrite
+printf 'ok - cursor role-loader overwritten when stale\n'
+
+test_cursor_role_loader_symlink_replaced
+printf 'ok - cursor role-loader symlink replaced with regular file\n'
+
+test_cursor_role_loader_destination_directory_fails
+printf 'ok - cursor role-loader directory destination fails with clear error\n'
+
+test_cursor_role_loader_idempotent
+printf 'ok - cursor role-loader copy is idempotent\n'
+
+test_cursor_home_override
+printf 'ok - cursor home override respected\n'
 
 printf 'All onboarding tests passed.\n'

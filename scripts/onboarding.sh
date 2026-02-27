@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 codex_home_override=""
+cursor_home_override=""
 skip_gh_auth=0
 SCRIPT_PATH="${0##*/}"
 
@@ -35,14 +36,16 @@ Description:
   Link this repo to ~/.codex (or override target), migrate user skills to ~/.codex/agents/skills,
   maintain ~/.agents/skills symlink, populate ~/.claude/skills with per-skill symlinks,
   regenerate config.toml from config.base.toml + config.local.toml,
+  copy the Cursor role-loader agent into ~/.cursor/agents (or override target),
   bootstrap GitHub CLI auth, and install a codex-net launcher for network-enabled sessions.
 
 Usage: ${SCRIPT_PATH} [OPTIONS]
 
 Options:
-  -h, --help          Show this help message and exit (optional)
-  --codex-home PATH   Override the ~/.codex symlink path (optional, default: ~/.codex)
-  --skip-gh-auth      Skip GitHub auth bootstrap and secret-file write (optional, default: off)
+  -h, --help             Show this help message and exit (optional)
+  --codex-home PATH      Override the ~/.codex symlink path (optional, default: ~/.codex)
+  --cursor-home PATH     Override the Cursor home directory for the role-loader installation (optional, default: ~/.cursor; use target-user writable paths)
+  --skip-gh-auth         Skip GitHub auth bootstrap and secret-file write (optional, default: off)
 EOF_HELP
 }
 
@@ -64,6 +67,18 @@ while [ $# -gt 0 ]; do
       codex_home_override="${1#*=}"
       shift
       ;;
+    --cursor-home)
+      shift
+      if [ $# -eq 0 ]; then
+        die_with_help "--cursor-home requires a PATH"
+      fi
+      cursor_home_override="$1"
+      shift
+      ;;
+    --cursor-home=*)
+      cursor_home_override="${1#*=}"
+      shift
+      ;;
     --skip-gh-auth)
       skip_gh_auth=1
       shift
@@ -82,6 +97,7 @@ while [ $# -gt 0 ]; do
 done
 
 codex_home="${codex_home_override:-$HOME/.codex}"
+cursor_home="${cursor_home_override:-$HOME/.cursor}"
 config_base="$repo_root/config.base.toml"
 config_local="$repo_root/config.local.toml"
 config_file="$repo_root/config.toml"
@@ -95,6 +111,9 @@ claude_home="$HOME/.claude"
 claude_skills_dir="$claude_home/skills"
 launcher_bin_dir="${XDG_BIN_HOME:-$HOME/.local/bin}"
 codex_net_launcher="$launcher_bin_dir/codex-net"
+cursor_agents_dir="$cursor_home/agents"
+cursor_role_loader_src="$repo_root/.platforms/cursor/agents/codex-role-loader.md"
+cursor_role_loader_dst="$cursor_agents_dir/codex-role-loader.md"
 
 canonical_path() {
   local path="$1"
@@ -333,9 +352,34 @@ ensure_claude_skills_links() {
   shopt -u nullglob
 }
 
+install_cursor_role_loader() {
+  if [ ! -f "$cursor_role_loader_src" ]; then
+    die "Cursor role-loader source not found: $cursor_role_loader_src"
+  fi
+
+  mkdir -p "$cursor_agents_dir"
+
+  if [ -d "$cursor_role_loader_dst" ]; then
+    die "Cursor role-loader destination exists as a directory; remove or move it: $cursor_role_loader_dst"
+  fi
+
+  if [ -L "$cursor_role_loader_dst" ]; then
+    log "Removing stale symlink at Cursor role-loader destination: $cursor_role_loader_dst"
+    rm "$cursor_role_loader_dst"
+  fi
+
+  local tmp_loader
+  tmp_loader="$(mktemp "$cursor_agents_dir/.codex-role-loader.XXXXXX")"
+  cp "$cursor_role_loader_src" "$tmp_loader"
+  chmod 644 "$tmp_loader"
+  mv "$tmp_loader" "$cursor_role_loader_dst"
+  log "Installed Cursor role-loader: $cursor_role_loader_dst"
+}
+
 log "Starting onboarding"
 log "Repo root: $repo_root"
 log "Target symlink: $codex_home -> $repo_root"
+log "Cursor home: $cursor_home"
 
 if [ ! -f "$config_base" ]; then
   die "Missing required base config: $config_base"
@@ -372,6 +416,7 @@ fi
 migrate_legacy_skills
 ensure_agents_skills_link
 ensure_claude_skills_links
+install_cursor_role_loader
 
 log "Upserting machine-local trust settings in: $config_local"
 ensure_repo_trust_block
