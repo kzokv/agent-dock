@@ -68,3 +68,18 @@ config_file = "agents-config/design-reviewer.toml"
 [agents."devops-reviewer"]
 description = "Reviews CI/CD reliability, infrastructure automation, and rollout safety risks."
 config_file = "agents-config/devops-reviewer.toml"
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
+
+[mcp_servers.linear]
+url = "https://mcp.linear.app/mcp"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+startup_timeout_sec = 30
+
+[notice.model_migrations]
+"gpt-5.1-codex-mini" = "gpt-5.3-codex"

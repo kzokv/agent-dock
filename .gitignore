@@ -2,6 +2,7 @@
 
 # Sensitive and machine-local
 auth.json
+.credentials.json
 sqlite/
 sessions/
 archived_sessions/
