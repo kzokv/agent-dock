@@ -101,6 +101,12 @@ run_onboarding() {
   local fixture_repo="$2"
   local codex_home="$3"
   shift 3
+  local fixture_root path_value
+  fixture_root="$(cd "$(dirname "$fixture_repo")" && pwd -P)"
+  path_value="${PATH:-}"
+  if [ "${ONBOARDING_TEST_SKIP_CODEX_STUB:-0}" != "1" ]; then
+    path_value="$fixture_root/default-bin${path_value:+:$path_value}"
+  fi
   local has_cursor_home=0
   local arg
   for arg in "$@"; do
@@ -111,7 +117,7 @@ run_onboarding() {
   if [ "$has_cursor_home" -eq 0 ]; then
     set -- --cursor-home "$fixture_home/.cursor" "$@"
   fi
-  HOME="$fixture_home" "$fixture_repo/scripts/onboarding.sh" "$codex_home" "$@"
+  HOME="$fixture_home" PATH="$path_value" "$fixture_repo/scripts/onboarding.sh" "$codex_home" "$@"
 }
 
 make_fixture() {
@@ -121,10 +127,17 @@ make_fixture() {
   local fixture_repo="$fixture_root/repo"
   mkdir -p "$fixture_repo/scripts"
   mkdir -p "$fixture_repo/.platforms/cursor/agents"
+  mkdir -p "$fixture_root/default-bin"
   cp "$source_script" "$fixture_repo/scripts/onboarding.sh"
   chmod +x "$fixture_repo/scripts/onboarding.sh"
   cp "$repo_root/.platforms/cursor/agents/codex-role-loader.md" \
     "$fixture_repo/.platforms/cursor/agents/codex-role-loader.md"
+  cat > "$fixture_root/default-bin/codex" <<'STUB_CODEX'
+#!/usr/bin/env bash
+set -euo pipefail
+exit 0
+STUB_CODEX
+  chmod +x "$fixture_root/default-bin/codex"
   printf '%s\n' "$fixture_root"
 }
 
@@ -177,6 +190,49 @@ fi
 exit 1
 STUB_GH
   chmod +x "$stub_dir/gh"
+  printf '%s\n' "$stub_dir"
+}
+
+install_stub_npm() {
+  local fixture_root="$1"
+  local stub_dir="$fixture_root/stubs"
+  mkdir -p "$stub_dir"
+  cat > "$stub_dir/npm" <<'STUB_NPM'
+#!/usr/bin/env bash
+set -euo pipefail
+
+prefix="${NPM_STUB_PREFIX:-}"
+log_dir="${NPM_STUB_LOG_DIR:-}"
+
+if [ "$#" -ge 2 ] && [ "$1" = "prefix" ] && [ "$2" = "-g" ]; then
+  if [ -z "$prefix" ]; then
+    exit 1
+  fi
+  printf '%s\n' "$prefix"
+  exit 0
+fi
+
+if [ "$#" -ge 3 ] && [ "$1" = "install" ] && [ "$2" = "-g" ] && [ "$3" = "@openai/codex" ]; then
+  if [ -n "$log_dir" ]; then
+    mkdir -p "$log_dir"
+    : > "$log_dir/npm-install-called"
+  fi
+  if [ -z "$prefix" ]; then
+    exit 1
+  fi
+  mkdir -p "$prefix/bin"
+  cat > "$prefix/bin/codex" <<'STUB_CODEX'
+#!/usr/bin/env bash
+set -euo pipefail
+exit 0
+STUB_CODEX
+  chmod +x "$prefix/bin/codex"
+  exit 0
+fi
+
+exit 1
+STUB_NPM
+  chmod +x "$stub_dir/npm"
   printf '%s\n' "$stub_dir"
 }
 
@@ -450,6 +506,62 @@ BASE
   [ ! -e "$codex_home/secrets/gh_token" ] || fail "Onboarding should not write GH token secrets"
 }
 
+test_codex_missing_installs_via_npm() {
+  local fixture_root fixture_repo fixture_home codex_home stub_dir output_file npm_prefix launcher_path
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  stub_dir="$(install_stub_npm "$fixture_root")"
+  output_file="$fixture_root/onboarding-codex-install.log"
+  npm_prefix="$fixture_root/npm-global"
+
+  case "$(uname -s)" in
+    Darwin) launcher_path="$fixture_home/bin/codex-net" ;;
+    *) launcher_path="$fixture_home/.local/bin/codex-net" ;;
+  esac
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills"
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  if ! ONBOARDING_TEST_SKIP_CODEX_STUB=1 \
+    PATH="$stub_dir:/usr/bin:/bin:/usr/sbin:/sbin" \
+    NPM_STUB_PREFIX="$npm_prefix" \
+    NPM_STUB_LOG_DIR="$fixture_root" \
+    run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" --skip-gh-auth >"$output_file" 2>&1; then
+    fail "Onboarding should install codex via npm when codex is missing"
+  fi
+
+  [ -f "$fixture_root/npm-install-called" ] || fail "Expected npm install to be invoked"
+  [ -x "$npm_prefix/bin/codex" ] || fail "Expected npm stub to install codex"
+  [ -x "$launcher_path" ] || fail "Expected codex-net launcher at $launcher_path"
+  assert_file_contains "$launcher_path" "exec \"$npm_prefix/bin/codex\" --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all"
+}
+
+test_codex_missing_without_npm_fails() {
+  local fixture_root fixture_repo fixture_home codex_home output_file
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  output_file="$fixture_root/onboarding-codex-missing.log"
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills"
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  if ONBOARDING_TEST_SKIP_CODEX_STUB=1 \
+    PATH="/usr/bin:/bin:/usr/sbin:/sbin" \
+    run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" --skip-gh-auth >"$output_file" 2>&1; then
+    fail "Onboarding should fail when codex and npm are both missing"
+  fi
+
+  assert_file_contains "$output_file" "Codex CLI ('codex') is required. Install npm and rerun onboarding, or install Codex manually with: npm install -g @openai/codex"
+}
+
 test_codex_net_launcher_installed() {
   local fixture_root fixture_repo fixture_home codex_home stub_dir launcher_path
   fixture_root="$(make_fixture)"
@@ -457,7 +569,10 @@ test_codex_net_launcher_installed() {
   fixture_home="$fixture_root/home"
   codex_home="$fixture_home/.codex"
   stub_dir="$(install_stub_gh "$fixture_root")"
-  launcher_path="$fixture_home/.local/bin/codex-net"
+  case "$(uname -s)" in
+    Darwin) launcher_path="$fixture_home/bin/codex-net" ;;
+    *) launcher_path="$fixture_home/.local/bin/codex-net" ;;
+  esac
 
   mkdir -p "$fixture_home" "$fixture_repo/agents/skills"
   cat > "$fixture_repo/config.base.toml" <<'BASE'
@@ -468,7 +583,7 @@ BASE
     GH_STUB_STATUS_RESULT="ok" \
     run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" >/dev/null
   [ -x "$launcher_path" ] || fail "Expected codex-net launcher at $launcher_path"
-  assert_file_contains "$launcher_path" 'exec codex --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all'
+  assert_file_contains "$launcher_path" '--sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all'
 }
 
 test_cursor_role_loader_copied() {
@@ -619,6 +734,12 @@ printf 'ok - gh auth invalid triggers login\n'
 
 test_no_token_persistence
 printf 'ok - no token persistence\n'
+
+test_codex_missing_installs_via_npm
+printf 'ok - codex missing installs via npm\n'
+
+test_codex_missing_without_npm_fails
+printf 'ok - codex missing without npm fails clearly\n'
 
 test_codex_net_launcher_installed
 printf 'ok - codex-net launcher installed\n'

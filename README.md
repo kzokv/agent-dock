@@ -40,15 +40,17 @@ Use a custom Codex home target:
 ```
 
 If you want to use `gh` from Codex agent sessions, run onboarding so it validates GitHub CLI auth and installs the
-network-enabled helper, then launch the helper instead of typing the full `codex --sandbox …` command:
+Codex CLI plus the network-enabled helper, then launch the helper instead of typing the full `codex --sandbox …` command:
 
 ```bash
 ./scripts/onboarding.sh
 codex-net
 ```
 
-Onboarding installs `codex-net` in `$XDG_BIN_HOME` (default: `~/.local/bin`) and warns if that directory is not on your
-`PATH`.
+Onboarding installs `codex-net` in `$XDG_BIN_HOME` when set. Otherwise it defaults to `~/bin` on macOS and
+`~/.local/bin` on other platforms, and warns if that directory is not on your `PATH`.
+
+If `codex` is missing, onboarding installs it with `npm install -g @openai/codex` before writing the launcher.
 
 ## Onboarding behavior
 
@@ -62,7 +64,8 @@ Onboarding installs `codex-net` in `$XDG_BIN_HOME` (default: `~/.local/bin`) and
 - regenerate `config.toml` from `config.base.toml` + `config.local.toml`
 - copy the Codex role-loader agent into `~/.cursor/agents` (or `--cursor-home` override) so Cursor can load role profiles from `~/.codex/agents`
 - verify GitHub CLI auth and run `gh auth login -h github.com` when needed so agent sessions can re-use the tracker login state
-- install a `codex-net` launcher (in `$XDG_BIN_HOME` or `~/.local/bin`) so you can start network-enabled sessions without manually typing the sandbox flags
+- install the Codex CLI with `npm install -g @openai/codex` when `codex` is not already available
+- install a `codex-net` launcher (in `$XDG_BIN_HOME`, or by default `~/bin` on macOS and `~/.local/bin` elsewhere) so you can start network-enabled sessions without manually typing the sandbox flags
 - fail fast with non-zero exit when `config.base.toml` is missing
 
 Re-running onboarding is idempotent and preserves unrelated local config.

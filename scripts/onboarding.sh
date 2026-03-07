@@ -37,7 +37,8 @@ Description:
   maintain ~/.agents/skills symlink, populate ~/.claude/skills with per-skill symlinks,
   regenerate config.toml from config.base.toml + config.local.toml,
   copy the Cursor role-loader agent into ~/.cursor/agents (or override target),
-  bootstrap GitHub CLI auth, and install a codex-net launcher for network-enabled sessions.
+  bootstrap GitHub CLI auth, install the Codex CLI when missing, and install a codex-net
+  launcher for network-enabled sessions.
 
 Usage: ${SCRIPT_PATH} [OPTIONS]
 
@@ -109,8 +110,9 @@ codex_skills_dir="$codex_home/agents/skills"
 legacy_skills_dir="$codex_home/skills"
 claude_home="$HOME/.claude"
 claude_skills_dir="$claude_home/skills"
-launcher_bin_dir="${XDG_BIN_HOME:-$HOME/.local/bin}"
-codex_net_launcher="$launcher_bin_dir/codex-net"
+codex_cli_path=""
+launcher_bin_dir=""
+codex_net_launcher=""
 cursor_agents_dir="$cursor_home/agents"
 cursor_role_loader_src="$repo_root/.platforms/cursor/agents/codex-role-loader.md"
 cursor_role_loader_dst="$cursor_agents_dir/codex-role-loader.md"
@@ -138,6 +140,93 @@ resolve_link_target_path() {
   else
     printf '%s/%s\n' "$(dirname "$link_path")" "$raw_target"
   fi
+}
+
+path_contains_dir() {
+  local dir="$1"
+  case ":$PATH:" in
+    *":$dir:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+resolve_launcher_bin_dir() {
+  if [ -n "${XDG_BIN_HOME:-}" ]; then
+    printf '%s\n' "$XDG_BIN_HOME"
+    return 0
+  fi
+
+  local platform
+  platform="$(uname -s 2>/dev/null || printf 'unknown')"
+
+  if [ "$platform" = "Darwin" ]; then
+    local candidate
+    for candidate in "$HOME/bin" "$HOME/.local/bin"; do
+      if path_contains_dir "$candidate"; then
+        printf '%s\n' "$candidate"
+        return 0
+      fi
+    done
+
+    for candidate in /opt/homebrew/bin /usr/local/bin; do
+      if path_contains_dir "$candidate" && [ -d "$candidate" ] && [ -w "$candidate" ]; then
+        printf '%s\n' "$candidate"
+        return 0
+      fi
+    done
+
+    printf '%s\n' "$HOME/bin"
+    return 0
+  fi
+
+  printf '%s\n' "$HOME/.local/bin"
+}
+
+resolve_npm_global_bin_dir() {
+  local npm_prefix
+  npm_prefix="$(npm prefix -g 2>/dev/null || true)"
+  [ -n "$npm_prefix" ] || return 1
+  printf '%s/bin\n' "$npm_prefix"
+}
+
+resolve_codex_cli_path() {
+  local resolved_path npm_bin_dir
+  resolved_path="$(command -v codex 2>/dev/null || true)"
+  if [ -n "$resolved_path" ]; then
+    printf '%s\n' "$resolved_path"
+    return 0
+  fi
+
+  npm_bin_dir="$(resolve_npm_global_bin_dir 2>/dev/null || true)"
+  if [ -n "$npm_bin_dir" ] && [ -x "$npm_bin_dir/codex" ]; then
+    printf '%s\n' "$npm_bin_dir/codex"
+    return 0
+  fi
+
+  return 1
+}
+
+ensure_codex_cli() {
+  codex_cli_path="$(resolve_codex_cli_path 2>/dev/null || true)"
+  if [ -n "$codex_cli_path" ]; then
+    log "Codex CLI already available: $codex_cli_path"
+    return 0
+  fi
+
+  if ! command -v npm >/dev/null 2>&1; then
+    die "Codex CLI ('codex') is required. Install npm and rerun onboarding, or install Codex manually with: npm install -g @openai/codex"
+  fi
+
+  log "Codex CLI ('codex') not found; installing with npm install -g @openai/codex"
+  npm install -g @openai/codex
+  hash -r 2>/dev/null || true
+
+  codex_cli_path="$(resolve_codex_cli_path 2>/dev/null || true)"
+  if [ -z "$codex_cli_path" ]; then
+    die "Codex CLI install completed but 'codex' is still not resolvable. Ensure your npm global bin directory is available, then rerun onboarding."
+  fi
+
+  log "Installed Codex CLI: $codex_cli_path"
 }
 
 ensure_repo_trust_block() {
@@ -188,9 +277,14 @@ write_executable_file_atomic() {
 
 install_codex_net_launcher() {
   local launcher_content
-  launcher_content='#!/usr/bin/env bash
+  launcher_bin_dir="$(resolve_launcher_bin_dir)"
+  codex_net_launcher="$launcher_bin_dir/codex-net"
+  launcher_content="$(cat <<EOF
+#!/usr/bin/env bash
 set -euo pipefail
-exec codex --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all'
+exec "$codex_cli_path" --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all
+EOF
+)"
 
   mkdir -p "$launcher_bin_dir"
   write_executable_file_atomic "$codex_net_launcher" "$launcher_content"
@@ -433,6 +527,7 @@ else
   ensure_gh_token_secret
 fi
 
+ensure_codex_cli
 install_codex_net_launcher
 
 log "Onboarding complete"
