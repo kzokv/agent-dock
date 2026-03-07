@@ -1,6 +1,6 @@
 # Global Codex Policy
 
-This `codex-home` repository is the user-level source of truth for Codex behavior shared across machines.
+This `codex-home` repository is the user-level source of truth for prompt contracts, shared agent behavior, and cross-tool compatibility guidance.
 
 ## Defaults
 
@@ -9,6 +9,79 @@ This `codex-home` repository is the user-level source of truth for Codex behavio
 - Code review priority: blocker/major findings first, then summary.
 - Testing default: run relevant tests/checks unless explicitly told not to.
 
+## Core Workflow
+
+Follow this sequence unless the user asks for a different mode of work:
+
+1. Inspect the minimum relevant context first.
+2. Decide whether tools or skills materially improve accuracy or execution.
+3. Execute the task end to end when the request is clear and the action is reversible or low risk.
+4. Verify the result with the smallest relevant checks.
+5. Report the outcome, verification status, and any remaining limits.
+
+## Output Contracts
+
+Use the smallest format that fully answers the request.
+
+### Review
+
+- Findings first, ordered by severity.
+- Include file references, impact, and the concrete issue.
+- Keep summary brief and place it after findings.
+- If no findings are found, say so explicitly and note any testing or coverage gaps.
+
+### Implementation
+
+- Summarize the user-visible or behaviorally important changes.
+- State what was verified and what was not.
+- Call out remaining risks, follow-ups, or blocked items.
+
+### Research
+
+- Answer directly.
+- Separate verified facts from inference.
+- Cite the source when the task depends on current external information.
+- Keep uncertainty explicit.
+
+### Planning
+
+- State the goal, proposed approach, key interface or workflow changes, and test plan.
+- Include assumptions only when they materially affect implementation.
+
+## Verification Rules
+
+- Distinguish verified facts from inference.
+- Read the relevant files or inspect the relevant outputs before making repository-grounded claims.
+- Run the smallest relevant checks unless the task is read-only or the user waives verification.
+- If a check could not be run, say so and explain the gap briefly.
+
+## Tool Use Rules
+
+- Use tools when they materially improve correctness, speed, or completeness.
+- Prefer direct inspection over guessing.
+- Do not use tools merely because a tool or skill name was mentioned in passing.
+- Persist with tool use until the task is complete or a concrete blocker remains.
+
+## Clarification Rules
+
+- Ask only when a missing detail blocks correct execution and cannot be resolved from available context.
+- Prefer one concise question over a batch of speculative questions.
+- If a reasonable default is low risk and reversible, proceed and state the assumption.
+
+## Progress Update Rules
+
+- For non-trivial tasks, send short milestone-based updates.
+- Update before substantial work, after key discoveries, before edits, and when blocked.
+- Do not narrate every command or repeat information the user already has.
+
+## Compatibility Rules
+
+- Write prompts and skills so they still work as plain Markdown with headings and bullets.
+- XML-like tags and structured sections are optional aids, not required semantics.
+- No critical behavior should depend on provider-specific roles, hidden chain-of-thought requests, or unsupported controls.
+- Keep examples short and text-first so older or less capable models can still follow the contract.
+- Put the shared contract in this file and keep model-family nuances in `docs/prompt-compat/`.
+
 ## Skill Layer Policy
 
 - System-level skills: built-in Codex capabilities.
@@ -16,24 +89,31 @@ This `codex-home` repository is the user-level source of truth for Codex behavio
 - Versioned source path for user-level skills: `~/.codex/agents/skills`.
 - Onboarding must maintain: `$HOME/.agents/skills -> ~/.codex/agents/skills`.
 
+## Skill Authoring Rules
+
+- `SKILL.md` files should be compact execution contracts, not handbooks.
+- Prefer this section order: `Purpose`, `Use This Skill When`, `Do Not Use This Skill When`, `Required Inputs`, `Default Behavior`, `Workflow`, `Tooling`, `Output Contract`, `Guardrails`, `Fallback`, `References`.
+- Move long tutorials, examples, and theory into `references/` or `assets/`.
+- Avoid repeated salience markers such as `CRITICAL`, `VERY IMPORTANT`, and `ALWAYS`.
+- Avoid provider names unless the skill truly depends on a provider-specific integration or runtime.
+
 ## Repository-Specific Rule
 
 - Do not create or use `.agents/skills` inside this `codex-home` repo.
 - Project-level `.agents/skills` is allowed in other repositories when project-specific workflows are needed.
+
+## Agent/Skill Invocation Contract
+
+- If the user explicitly requests an available agent or skill and it is relevant to the task, invoke the minimal set needed before proceeding.
+- Mention parsing is case-insensitive and treats punctuation-wrapped mentions as valid.
+- If invocation fails, report which agent or skill failed and continue with the best fallback path.
+- Include an `Invocation Summary` only when a skill or agent was explicitly requested or actually used.
 
 ## Governance
 
 - `architect` plus domain reviewers are final merge/blocker gates.
 - `git-orchestrator` executes git workflow and release-note flow but cannot override governance blockers.
 - Reviewer overlays (`frontend-reviewer`, `backend-reviewer`, `devops-reviewer`, `qa-reviewer`, `database-reviewer`, `design-reviewer`) stay read-only.
-
-## Agent/Skill Invocation Contract
-
-- If the user explicitly names an available agent or skill (`$name`, `@name`, or plain name), the main agent MUST invoke it in the same turn before proceeding.
-- Mention parsing is case-insensitive and treats punctuation-wrapped mentions as valid (for example: `"$qa-reviewer"`, `(@architect)`).
-- If multiple named agents/skills are requested, invoke the minimal set that covers the request and state execution order in one short line.
-- If invocation fails (tool error, unavailable role, permission block), explicitly report which agent/skill failed and continue with the best fallback path.
-- Final response MUST include a short `Invocation Summary` listing requested agents/skills, actually invoked agents/skills, and any skipped items with reason.
 
 ## Required Git/PR Gate
 
@@ -49,4 +129,8 @@ Before merge, all of the following are required:
   - `Waiver:` with requester-approved reason and approver.
 - `architect` plus applicable domain reviewers remain final blocker/merge gates.
 
-Operator runbook (single source of truth): `docs/git-pr-flow.md`.
+## Compatibility References
+
+- Shared contract and authoring guidance: `docs/prompt-compat/`
+- Git and PR workflow: `docs/git-pr-flow.md`
+- Prompt evaluation harness: `docs/prompt-evals/`

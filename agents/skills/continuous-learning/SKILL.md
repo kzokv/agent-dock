@@ -1,119 +1,69 @@
 ---
 name: continuous-learning
-description: Automatically extract reusable patterns from Claude Code sessions and save them as learned skills for future use.
+description: Automatically extract reusable patterns from agent sessions and save them as learned skills or prompts for future use.
 origin: ECC
 ---
 
-# Continuous Learning Skill
+# Continuous Learning
 
-Automatically evaluates Claude Code sessions on end to extract reusable patterns that can be saved as learned skills.
+## Purpose
+Capture reusable patterns from completed sessions and turn them into durable guidance, skills, or follow-up prompts. Use this skill when the goal is to improve future agent behavior from real work instead of solving the current task directly.
 
-## When to Activate
+## Use This Skill When
+- Setting up or reviewing the end-of-session extraction workflow.
+- Tuning pattern-detection thresholds or learned-skill destinations.
+- Auditing whether the extraction script is saving useful patterns.
+- Adapting the workflow to a different agent runtime or hooks system.
 
-- Setting up automatic pattern extraction from Claude Code sessions
-- Configuring the Stop hook for session evaluation
-- Reviewing or curating learned skills in `~/.claude/skills/learned/`
-- Adjusting extraction thresholds or pattern categories
-- Comparing v1 (this) vs v2 (instinct-based) approaches
+## Do Not Use This Skill When
+- The user wants help on the active task rather than on learning from past tasks.
+- The session is too short or too noisy to yield stable patterns.
+- The environment does not expose a transcript or hook payload.
 
-## How It Works
+## Required Inputs
+- The runtime being integrated, if it is not the default workflow.
+- The desired transcript source or hook mechanism.
+- The learned-output location, if it differs from `config.json`.
+- Any thresholds or pattern categories the user wants to change.
 
-This skill runs as a **Stop hook** at the end of each session:
+If the runtime is unclear, inspect the local script and config first and describe the default behavior before proposing changes.
 
-1. **Session Evaluation**: Checks if session has enough messages (default: 10+)
-2. **Pattern Detection**: Identifies extractable patterns from the session
-3. **Skill Extraction**: Saves useful patterns to `~/.claude/skills/learned/`
+## Default Behavior
+- Use `evaluate-session.sh` as the primary integration point.
+- Read settings from `config.json` when present.
+- Prefer end-of-session extraction to per-message extraction unless the user explicitly needs finer-grained hooks.
+- Keep learned outputs in a user-scoped path rather than inside this repository.
 
-## Configuration
+## Workflow
+1. Inspect `config.json` and `evaluate-session.sh` to confirm the current transcript source, thresholds, and output path behavior.
+2. Confirm whether the task is setup, tuning, review, or runtime adaptation.
+3. Adjust or describe the hook integration, config values, and learned-output path.
+4. Check that the workflow remains user-scoped and does not write learned skills into this repo.
+5. Summarize what will be extracted, where it will be written, and any runtime assumptions.
 
-Edit `config.json` to customize:
+## Tooling
+- Primary files: `config.json`, `evaluate-session.sh`.
+- Expected input: transcript metadata from a stop hook or equivalent runtime callback.
+- Learned output path: user-scoped path configured in `config.json` or resolved by the script.
 
-```json
-{
-  "min_session_length": 10,
-  "extraction_threshold": "medium",
-  "auto_approve": false,
-  "learned_skills_path": "~/.claude/skills/learned/",
-  "patterns_to_detect": [
-    "error_resolution",
-    "user_corrections",
-    "workarounds",
-    "debugging_techniques",
-    "project_specific"
-  ],
-  "ignore_patterns": [
-    "simple_typos",
-    "one_time_fixes",
-    "external_api_issues"
-  ]
-}
-```
+## Output Contract
+Return:
+- The configured or proposed learning workflow.
+- Any changed thresholds, hook behavior, or output-path assumptions.
+- Risks or limitations, such as missing transcript support or runtime-specific dependencies.
+- Verification status, including whether the script/config were only inspected or also exercised.
 
-## Pattern Types
+## Guardrails
+- Keep learned outputs outside this repository.
+- Do not assume one provider-specific runtime if the script can be adapted.
+- Prefer deterministic config and script changes over speculative architectural comparisons.
+- Avoid embedding machine-specific paths in the skill contract unless they are part of the actual implementation.
 
-| Pattern | Description |
-|---------|-------------|
-| `error_resolution` | How specific errors were resolved |
-| `user_corrections` | Patterns from user corrections |
-| `workarounds` | Solutions to framework/library quirks |
-| `debugging_techniques` | Effective debugging approaches |
-| `project_specific` | Project-specific conventions |
+## Fallback
+- If no hook or transcript source exists, document the missing prerequisite and suggest a manual export-and-review workflow.
+- If the runtime is incompatible with the current script, keep the skill focused on the extraction contract and note where an adapter is needed.
+- If the user only wants conceptual advice, provide the workflow without claiming the local integration is configured.
 
-## Hook Setup
-
-Add to your `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "Stop": [{
-      "matcher": "*",
-      "hooks": [{
-        "type": "command",
-        "command": "~/.claude/skills/continuous-learning/evaluate-session.sh"
-      }]
-    }]
-  }
-}
-```
-
-## Why Stop Hook?
-
-- **Lightweight**: Runs once at session end
-- **Non-blocking**: Doesn't add latency to every message
-- **Complete context**: Has access to full session transcript
-
-## Related
-
-- [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) - Section on continuous learning
-- `/learn` command - Manual pattern extraction mid-session
-
----
-
-## Comparison Notes (Research: Jan 2025)
-
-### vs Homunculus
-
-Homunculus v2 takes a more sophisticated approach:
-
-| Feature | Our Approach | Homunculus v2 |
-|---------|--------------|---------------|
-| Observation | Stop hook (end of session) | PreToolUse/PostToolUse hooks (100% reliable) |
-| Analysis | Main context | Background agent (Haiku) |
-| Granularity | Full skills | Atomic "instincts" |
-| Confidence | None | 0.3-0.9 weighted |
-| Evolution | Direct to skill | Instincts → cluster → skill/command/agent |
-| Sharing | None | Export/import instincts |
-
-**Key insight from homunculus:**
-> "v1 relied on skills to observe. Skills are probabilistic—they fire ~50-80% of the time. v2 uses hooks for observation (100% reliable) and instincts as the atomic unit of learned behavior."
-
-### Potential v2 Enhancements
-
-1. **Instinct-based learning** - Smaller, atomic behaviors with confidence scoring
-2. **Background observer** - Haiku agent analyzing in parallel
-3. **Confidence decay** - Instincts lose confidence if contradicted
-4. **Domain tagging** - code-style, testing, git, debugging, etc.
-5. **Evolution path** - Cluster related instincts into skills/commands
-
-See: `/Users/affoon/Documents/tasks/12-continuous-learning-v2.md` for full spec.
+## References
+- `config.json` for thresholds and learned-output settings.
+- `evaluate-session.sh` for the current hook integration behavior.

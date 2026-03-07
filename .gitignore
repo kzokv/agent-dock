@@ -31,3 +31,6 @@ config.toml
 # Auto generated system skills
 skills/.system/
 agents/skills/.system/
+
+# Session 
+session_index.jsonl
