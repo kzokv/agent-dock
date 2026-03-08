@@ -22,6 +22,16 @@ Use one entry per model family and prompt revision.
 | Missing auth or missing tool fallback |  |  |
 | Ambiguous request needing clarification |  |  |
 | Named skill or agent invocation |  |  |
+| Knowledge promotion to `AGENTS.md` |  |  |
+| Knowledge promotion to `docs/notes/` |  |  |
+| Knowledge promotion to `docs/adr/` |  |  |
+| No durable promotion needed |  |  |
+| Handoff with verification |  |  |
+| Minimal or no handoff needed |  |  |
+| Curate with concrete cleanup findings |  |  |
+| Curate with no cleanup needed |  |  |
+| Decision with ADR-worthy outcome |  |  |
+| Decision with no ADR needed |  |  |
 
 ## Dimension Scores
 
@@ -34,6 +44,9 @@ Use one entry per model family and prompt revision.
 | Completion of multi-step tasks |  |  |
 | Verbosity and token discipline |  |  |
 | Backward compatibility |  |  |
+| Deterministic routing |  |  |
+| No-op behavior |  |  |
+| Verification-state quality |  |  |
 
 ## Summary
 

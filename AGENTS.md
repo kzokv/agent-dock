@@ -19,6 +19,29 @@ Follow this sequence unless the user asks for a different mode of work:
 4. Verify the result with the smallest relevant checks.
 5. Report the outcome, verification status, and any remaining limits.
 
+## Knowledge Capture Defaults
+
+- Prefer repository markdown and repo policy files as the canonical home for durable knowledge.
+- When a repository defines a curation workflow, promote only repeated corrections, reusable workflows, meaningful decisions, or expensive-to-rediscover gotchas.
+- Treat shared prompts as convenience wrappers; shared skills and repository `AGENTS.md` remain the durable contract.
+- For meaningful implementation, debugging, or handoff work, leave concise handoff state only when the active repository policy calls for it.
+
+## Knowledge Capture Behavior
+
+- When useful durable knowledge emerges, suggest at most one best next follow-up action.
+- Suggestions are conditional. Do not suggest capture on every task or session.
+- Treat suggested actions as examples, not a required checklist:
+  - promote a repo-wide rule into `AGENTS.md`
+  - record a repeatable workflow as a skill
+  - record a design or architecture decision in the repository's decision-log location
+  - add a technical gotcha or discussion summary to the repository's durable note location
+  - refresh the repository's handoff file if that repository uses one
+- Drive capture choices from conventions discovered in the active repository, not from `codex-home` path assumptions.
+- Use slash prompts and explicit skill invocation for structured capture work.
+- During a session, suggest promotion only when a real durable item appears. Structured capture normally starts with `/prompts:promote` or `$knowledge-curator`.
+- Before finishing a task, recommend `/prompts:handoff` only when resumability matters.
+- Use `/prompts:curate` or the curator skill for periodic cleanup and maintenance mode, not routine task flow.
+
 ## Output Contracts
 
 Use the smallest format that fully answers the request.

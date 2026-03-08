@@ -11,6 +11,7 @@ Tracked:
 - `AGENTS.md`
 - `agents/`
 - `agents/skills/`
+- `prompts/`
 - `agents-config/`
 - `automations/`
 - `.platforms/cursor/agents/` — Cursor IDE agent definitions (e.g., `codex-role-loader.md`), installed to `~/.cursor/agents` by onboarding
@@ -59,6 +60,7 @@ If `codex` is missing, onboarding installs it with `npm install -g @openai/codex
 - back up an existing target path (`~/.codex` by default) before creating the symlink
 - migrate legacy user skills from `~/.codex/skills` to `~/.codex/agents/skills` (one time)
 - maintain `$HOME/.agents/skills -> ~/.codex/agents/skills`
+- expose tracked shared prompts at `~/.codex/prompts` through the existing `~/.codex -> codex-home` symlink model
 - populate `$HOME/.claude/skills` with per-skill symlinks that reference `$HOME/.agents/skills` so Claude-based helpers can discover the same skills
 - upsert machine-local trust for this repo by rewriting only its `[projects."…"]` block in `config.local.toml`
 - regenerate `config.toml` from `config.base.toml` + `config.local.toml`
@@ -93,6 +95,14 @@ Do not edit `config.toml` directly. Update `config.base.toml` and/or `config.loc
 - User-level discovery path: `$HOME/.agents/skills`
 - This repo must not define `.agents/skills`
 - Other repos may define `<repo>/.agents/skills` for project-specific workflows
+
+## Prompts model
+
+- Shared prompt source: `~/.codex/prompts`
+- In this repo-backed setup, `~/.codex/prompts` resolves to the tracked `prompts/` directory through the `~/.codex -> codex-home` symlink
+- Prompts are shared convenience wrappers, not a replacement for shared skills or repository `AGENTS.md`
+- The active repository defines its actual note, decision-log, and handoff locations; `codex-home` provides the generic contract, not a mandatory repository information architecture
+- When shared prompt contracts change, update prompt-eval coverage before treating the new wording as the default contract
 
 ## Validation and maintenance
 

@@ -10,7 +10,8 @@ print_help() {
   cat <<EOF_HELP
 Description:
   Run tests that validate scripts/onboarding.sh is non-destructive, idempotent, enforces user-level skill-link
-  policy, bootstraps GitHub auth, installs a codex-net launcher, and installs the Cursor role-loader.
+  policy, exposes tracked shared prompts through ~/.codex/prompts, bootstraps GitHub auth,
+  installs a codex-net launcher, and installs the Cursor role-loader.
 
 Usage: ${SCRIPT_PATH} [OPTIONS]
 
@@ -292,6 +293,28 @@ EOF_LOCAL
   if ls "$fixture_home/.agents/skills".symlink.backup.* >/dev/null 2>&1; then
     fail "No user skills backup should be created on idempotent re-run"
   fi
+}
+
+test_prompts_visible_via_codex_home_symlink() {
+  local fixture_root fixture_repo fixture_home codex_home
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills" "$fixture_repo/prompts"
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+  cat > "$fixture_repo/prompts/curate.md" <<'PROMPT'
+# Curate
+PROMPT
+
+  run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" --skip-gh-auth >/dev/null
+
+  [ -f "$codex_home/prompts/curate.md" ] || fail "Expected tracked prompt to be visible via $codex_home/prompts/curate.md"
+  [ ! -L "$codex_home/prompts" ] || fail "Prompts should remain a tracked directory through the repo symlink, not a second symlink"
+  assert_file_contains "$codex_home/prompts/curate.md" "# Curate"
 }
 
 test_cursor_role_loader_destination_directory_fails() {
@@ -707,6 +730,9 @@ BASE
 
 test_non_destructive_and_idempotent
 printf 'ok - non-destructive and idempotent\n'
+
+test_prompts_visible_via_codex_home_symlink
+printf 'ok - shared prompts visible via codex home symlink\n'
 
 test_missing_base_fails
 printf 'ok - missing base fails\n'

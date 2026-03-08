@@ -11,4 +11,4 @@ Evaluation rule:
 
 - Tune the shared core first.
 - Add or change overlays only when the benchmark shows a clear, repeatable benefit for a model family.
-
+- When capture or workflow prompts change, extend the benchmark with scenario-specific pass/fail checks before adopting the revision.

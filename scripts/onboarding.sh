@@ -34,7 +34,8 @@ print_help() {
   cat <<EOF_HELP
 Description:
   Link this repo to ~/.codex (or override target), migrate user skills to ~/.codex/agents/skills,
-  maintain ~/.agents/skills symlink, populate ~/.claude/skills with per-skill symlinks,
+  maintain ~/.agents/skills symlink, expose tracked shared prompts at ~/.codex/prompts via
+  the repo symlink, populate ~/.claude/skills with per-skill symlinks,
   regenerate config.toml from config.base.toml + config.local.toml,
   copy the Cursor role-loader agent into ~/.cursor/agents (or override target),
   bootstrap GitHub CLI auth, install the Codex CLI when missing, and install a codex-net
@@ -98,6 +99,7 @@ while [ $# -gt 0 ]; do
 done
 
 codex_home="${codex_home_override:-$HOME/.codex}"
+codex_prompts_dir="$codex_home/prompts"
 cursor_home="${cursor_home_override:-$HOME/.cursor}"
 config_base="$repo_root/config.base.toml"
 config_local="$repo_root/config.local.toml"
@@ -473,6 +475,7 @@ install_cursor_role_loader() {
 log "Starting onboarding"
 log "Repo root: $repo_root"
 log "Target symlink: $codex_home -> $repo_root"
+log "Shared prompts path: $codex_prompts_dir"
 log "Cursor home: $cursor_home"
 
 if [ ! -f "$config_base" ]; then
@@ -505,6 +508,10 @@ elif [ -e "$codex_home" ]; then
 else
   log "No existing path at $codex_home; creating symlink"
   ln -s "$repo_root" "$codex_home"
+fi
+
+if [ -d "$codex_prompts_dir" ]; then
+  log "Tracked shared prompts available via: $codex_prompts_dir"
 fi
 
 migrate_legacy_skills
