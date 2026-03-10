@@ -299,7 +299,19 @@ install_codex_net_launcher() {
   launcher_content="$(cat <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-exec "$codex_cli_path" --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all
+default_codex_path="$codex_cli_path"
+resolved_codex_path="\$(command -v codex 2>/dev/null || true)"
+
+if [ -z "\$resolved_codex_path" ] && [ -x "\$default_codex_path" ]; then
+  resolved_codex_path="\$default_codex_path"
+fi
+
+if [ -z "\$resolved_codex_path" ]; then
+  printf 'codex-net: unable to locate the Codex CLI. Rerun onboarding or install codex.\\n' >&2
+  exit 1
+fi
+
+exec "\$resolved_codex_path" --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all "\$@"
 EOF
 )"
 

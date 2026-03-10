@@ -162,6 +162,9 @@ MATRIX
   cat > "$fixture_root/default-bin/codex" <<'STUB_CODEX'
 #!/usr/bin/env bash
 set -euo pipefail
+if [ -n "${CODEX_STUB_LOG:-}" ]; then
+  printf '%s\n' "$@" > "$CODEX_STUB_LOG"
+fi
 exit 0
 STUB_CODEX
   chmod +x "$fixture_root/default-bin/codex"
@@ -251,6 +254,9 @@ if [ "$#" -ge 3 ] && [ "$1" = "install" ] && [ "$2" = "-g" ] && [ "$3" = "@opena
   cat > "$prefix/bin/codex" <<'STUB_CODEX'
 #!/usr/bin/env bash
 set -euo pipefail
+if [ -n "${CODEX_STUB_LOG:-}" ]; then
+  printf '%s\n' "$@" > "$CODEX_STUB_LOG"
+fi
 exit 0
 STUB_CODEX
   chmod +x "$prefix/bin/codex"
@@ -597,7 +603,8 @@ BASE
   [ -f "$fixture_root/npm-install-called" ] || fail "Expected npm install to be invoked"
   [ -x "$npm_prefix/bin/codex" ] || fail "Expected npm stub to install codex"
   [ -x "$launcher_path" ] || fail "Expected codex-net launcher at $launcher_path"
-  assert_file_contains "$launcher_path" "exec \"$npm_prefix/bin/codex\" --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all"
+  assert_file_contains "$launcher_path" "default_codex_path=\"$npm_prefix/bin/codex\""
+  assert_file_contains "$launcher_path" 'exec "$resolved_codex_path" --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all "$@"'
 }
 
 test_codex_missing_without_npm_fails() {
@@ -644,6 +651,55 @@ BASE
     run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" >/dev/null
   [ -x "$launcher_path" ] || fail "Expected codex-net launcher at $launcher_path"
   assert_file_contains "$launcher_path" '--sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all'
+}
+
+test_codex_net_launcher_uses_runtime_codex_and_forwards_args() {
+  local fixture_root fixture_repo fixture_home codex_home stub_dir launcher_path runtime_bin codex_log
+  fixture_root="$(make_fixture)"
+  fixture_repo="$fixture_root/repo"
+  fixture_home="$fixture_root/home"
+  codex_home="$fixture_home/.codex"
+  stub_dir="$(install_stub_gh "$fixture_root")"
+  runtime_bin="$fixture_root/runtime-bin"
+  codex_log="$fixture_root/codex-args.log"
+
+  case "$(uname -s)" in
+    Darwin) launcher_path="$fixture_home/bin/codex-net" ;;
+    *) launcher_path="$fixture_home/.local/bin/codex-net" ;;
+  esac
+
+  mkdir -p "$fixture_home" "$fixture_repo/agents/skills" "$runtime_bin"
+  cat > "$fixture_repo/config.base.toml" <<'BASE'
+model = "gpt-5"
+BASE
+
+  PATH="$stub_dir:/usr/bin:/bin:/usr/sbin:/sbin" \
+    GH_STUB_STATUS_RESULT="ok" \
+    run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" >/dev/null
+
+  cat > "$runtime_bin/codex" <<'STUB_CODEX'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "${CODEX_STUB_LOG:-}" ]; then
+  printf '%s\n' "$@" > "$CODEX_STUB_LOG"
+fi
+exit 0
+STUB_CODEX
+  chmod +x "$runtime_bin/codex"
+
+  HOME="$fixture_home" \
+    PATH="$runtime_bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+    CODEX_STUB_LOG="$codex_log" \
+    "$launcher_path" --help
+
+  assert_file_contains "$codex_log" "--sandbox"
+  assert_file_contains "$codex_log" "danger-full-access"
+  assert_file_contains "$codex_log" "-a"
+  assert_file_contains "$codex_log" "never"
+  assert_file_contains "$codex_log" "--search"
+  assert_file_contains "$codex_log" "-c"
+  assert_file_contains "$codex_log" "shell_environment_policy.inherit=all"
+  assert_file_contains "$codex_log" "--help"
 }
 
 test_cursor_role_loader_copied() {
@@ -806,6 +862,9 @@ printf 'ok - codex missing without npm fails clearly\n'
 
 test_codex_net_launcher_installed
 printf 'ok - codex-net launcher installed\n'
+
+test_codex_net_launcher_uses_runtime_codex_and_forwards_args
+printf 'ok - codex-net launcher uses runtime codex and forwards args\n'
 
 test_cursor_role_loader_copied
 printf 'ok - cursor role-loader copied as regular file\n'
