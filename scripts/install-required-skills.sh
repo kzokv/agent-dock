@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 INSTALLER="${REPO_ROOT}/skills/.system/skill-installer/scripts/install-skill-from-github.py"
 SOURCE_DEST="${REPO_ROOT}/agents/skills"
+MATRIX_PARSER="${REPO_ROOT}/scripts/role_skill_matrix.py"
 
 if [[ ! -f "${INSTALLER}" ]]; then
   echo "Installer not found: ${INSTALLER}" >&2
@@ -13,24 +14,12 @@ fi
 
 mkdir -p "${SOURCE_DEST}"
 
-# Required curated skills across canonical roles.
-# Optional external accelerators are intentionally excluded.
-REQUIRED_SKILLS=(
-  openai-docs
-  security-best-practices
-  security-threat-model
-  security-ownership-map
-  gh-fix-ci
-  gh-address-comments
-  playwright
-  screenshot
-  figma-implement-design
-  sentry
-  spreadsheet
-  jupyter-notebook
-  doc
-  pdf
-)
+if [[ ! -f "${MATRIX_PARSER}" ]]; then
+  echo "Matrix parser not found: ${MATRIX_PARSER}" >&2
+  exit 1
+fi
+
+mapfile -t REQUIRED_SKILLS < <(python3 "${MATRIX_PARSER}" --set required)
 
 MISSING_PATHS=()
 for skill in "${REQUIRED_SKILLS[@]}"; do

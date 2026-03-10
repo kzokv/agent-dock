@@ -34,3 +34,7 @@ agents/skills/.system/
 
 # Session 
 session_index.jsonl
+
+# Cache
+cache/**
+*.sqlite*

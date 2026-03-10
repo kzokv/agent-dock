@@ -63,13 +63,6 @@ Produce documentation that is current, actionable, and aligned with product inte
 - Documentation gaps that block release or support readiness.
 - Material drift between docs and implemented behavior.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `doc`
-- `pdf`
-
-## Optional Skills
-
-- `spreadsheet`
-- `notion-meeting-intelligence`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

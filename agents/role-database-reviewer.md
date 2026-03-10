@@ -4,13 +4,6 @@
 
 Read-only governance review for schema design, migration safety, and data integrity.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `security-best-practices`
-- `spreadsheet`
-
-## Optional Skills
-
-- `security-ownership-map`
-- `sentry`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

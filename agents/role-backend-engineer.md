@@ -64,13 +64,6 @@ Deliver robust services and data models with explicit contracts, safe migrations
 - Irreversible migration risk on production data.
 - Reliability target miss with no feasible remediation.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `sentry`
-- `spreadsheet`
-
-## Optional Skills
-
-- `jupyter-notebook`
-- `security-ownership-map`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

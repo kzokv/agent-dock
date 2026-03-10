@@ -78,6 +78,7 @@ done
 node - "$REPO_ROOT" "$PROJECT_ROOT" "$MAX_BOOTSTRAP_TOKENS" "$MAX_SESSION_TOKENS" "$OUTPUT_JSON" <<'NODE'
 const fs = require("fs");
 const path = require("path");
+const { execFileSync } = require("child_process");
 
 const [repoRoot, projectRootInput, maxBootstrapInput, maxSessionInput, outputJsonInput] = process.argv.slice(2);
 const projectRoot = path.resolve(projectRootInput);
@@ -129,13 +130,12 @@ function collectSkillPromptLines(skillRoots, pathBuilder) {
 }
 
 function collectEnabledUserSkillLines() {
-  const manifestPath = path.join(repoRoot, "agents/skills/default-enabled-skills.txt");
-  const content = readIfExists(manifestPath);
-  if (!content) return [];
-  const names = content
+  const parserPath = path.join(repoRoot, "scripts/role_skill_matrix.py");
+  if (!fs.existsSync(parserPath)) return [];
+  const names = execFileSync("python3", [parserPath, "--set", "enabled"], { encoding: "utf8" })
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"));
+    .filter(Boolean);
   const rows = [];
   for (const name of names) {
     const skillMd = path.join(repoRoot, "agents/skills", name, "SKILL.md");

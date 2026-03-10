@@ -43,6 +43,6 @@ Deliver secure, maintainable, and valuable software through explicit ownership b
 
 ## Skills Baseline
 
-- Universal baseline for all canonical roles: `openai-docs`.
-- Security/Governance skills are required only for roles that own governance functions.
-- GitHub Ops skills are required for QA, DevOps, reviewers, and Git Orchestrator.
+- Canonical role bindings live only in `agents/skills-matrix.md`.
+- `openai-docs` is a universal optional skill, not a universal requirement.
+- Required skills must reflect role-core capability rather than narrow external-context workflows.

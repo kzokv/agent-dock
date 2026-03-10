@@ -61,7 +61,7 @@ If `codex` is missing, onboarding installs it with `npm install -g @openai/codex
 - migrate legacy user skills from `~/.codex/skills` to `~/.codex/agents/skills` (one time)
 - rebuild `$HOME/.agents/skills` as the enabled discovery subset and `$HOME/.agents/skills-library` as the archived remainder
 - expose tracked shared prompts at `~/.codex/prompts` through the existing `~/.codex -> codex-home` symlink model
-- populate `$HOME/.claude/skills` with per-skill symlinks that mirror enabled skills only
+- populate `$HOME/.claude/skills` with per-skill symlinks for every installed skill
 - upsert machine-local trust for this repo by rewriting only its `[projects."…"]` block in `config.local.toml`
 - regenerate `config.toml` from `config.base.toml` + `config.local.toml`
 - copy the Codex role-loader agent into `~/.cursor/agents` (or `--cursor-home` override) so Cursor can load role profiles from `~/.codex/agents`

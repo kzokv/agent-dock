@@ -36,7 +36,7 @@ Description:
   Link this repo to ~/.codex (or override target), migrate user skills to ~/.codex/agents/skills,
   maintain ~/.agents/skills as the enabled discovery subset plus ~/.agents/skills-library as
   the archived remainder, expose tracked shared prompts at ~/.codex/prompts via the repo
-  symlink, populate ~/.claude/skills with links for enabled skills only,
+  symlink, populate ~/.claude/skills with per-skill links for every installed skill,
   regenerate config.toml from config.base.toml + config.local.toml,
   copy the Cursor role-loader agent into ~/.cursor/agents (or override target),
   bootstrap GitHub CLI auth, install the Codex CLI when missing, and install a codex-net
@@ -112,7 +112,7 @@ agents_skills_dir="$agents_home/skills"
 agents_skills_library_dir="$agents_home/skills-library"
 codex_skills_dir="$codex_home/agents/skills"
 legacy_skills_dir="$codex_home/skills"
-enabled_skills_manifest="$repo_root/agents/skills/default-enabled-skills.txt"
+role_skill_matrix_parser="$repo_root/scripts/role_skill_matrix.py"
 claude_home="$HOME/.claude"
 claude_skills_dir="$claude_home/skills"
 codex_cli_path=""
@@ -397,20 +397,18 @@ migrate_legacy_skills() {
 }
 
 load_enabled_skill_names() {
-  if [ ! -f "$enabled_skills_manifest" ]; then
-    die "Enabled skills manifest not found: $enabled_skills_manifest"
+  if [ ! -f "$role_skill_matrix_parser" ]; then
+    die "Role skill matrix parser not found: $role_skill_matrix_parser"
   fi
 
   enabled_skill_names=""
   while IFS= read -r line || [ -n "$line" ]; do
-    line="${line%%#*}"
-    line="$(printf '%s' "$line" | tr -d '[:space:]')"
     [ -n "$line" ] || continue
     if [ ! -d "$codex_skills_dir/$line" ]; then
-      die "Enabled skill listed in manifest but missing from source tree: $line"
+      die "Enabled skill derived from skills matrix but missing from source tree: $line"
     fi
     enabled_skill_names="${enabled_skill_names}${line}"$'\n'
-  done < "$enabled_skills_manifest"
+  done < <(python3 "$role_skill_matrix_parser" --set enabled)
 }
 
 ensure_managed_skill_dir() {
@@ -470,27 +468,30 @@ ensure_claude_skills_links() {
   mkdir -p "$claude_skills_dir"
 
   shopt -s nullglob
-  local existing_path existing_target skill_path skill_name link_path rel_target
+  local existing_path existing_target existing_name skill_path skill_name link_path
   for existing_path in "$claude_skills_dir"/*; do
     [ -L "$existing_path" ] || continue
+    existing_name="$(basename "$existing_path")"
     existing_target="$(readlink "$existing_path")"
-    if [[ "$existing_target" = ../../.agents/skills/* ]] && [ ! -e "$agents_skills_dir/$(basename "$existing_path")" ]; then
+    if { [ "$existing_target" = "$codex_skills_dir/$existing_name" ] || [[ "$existing_target" = ../../.agents/skills/* ]] || [[ "$existing_target" = ../../.codex/agents/skills/* ]]; } \
+      && [ ! -e "$codex_skills_dir/$existing_name" ]; then
       log "Removing stale Claude skill symlink: $existing_path"
       rm "$existing_path"
     fi
   done
 
-  local current_target
-  for skill_path in "$agents_skills_dir"/*; do
-    [ -L "$skill_path" ] || continue
+  local current_target current_target_path current_target_canonical skill_path_canonical
+  for skill_path in "$codex_skills_dir"/*; do
+    [ -d "$skill_path" ] || continue
     skill_name="$(basename "$skill_path")"
     link_path="$claude_skills_dir/$skill_name"
-    rel_target="../../.agents/skills/$skill_name"
 
     if [ -L "$link_path" ]; then
-      local current_target
       current_target="$(readlink "$link_path")"
-      if [ "$current_target" = "$rel_target" ]; then
+      current_target_path="$(resolve_link_target_path "$link_path")"
+      current_target_canonical="$(canonical_path "$current_target_path" 2>/dev/null || true)"
+      skill_path_canonical="$(canonical_path "$skill_path" 2>/dev/null || true)"
+      if [ -n "$skill_path_canonical" ] && [ "$current_target_canonical" = "$skill_path_canonical" ]; then
         log "Claude skill symlink already correct: $link_path -> $current_target"
         continue
       fi
@@ -503,8 +504,8 @@ ensure_claude_skills_links() {
       mv "$link_path" "$backup_path"
     fi
 
-    log "Creating Claude skill symlink: $link_path -> $rel_target"
-    ln -s "$rel_target" "$link_path"
+    log "Creating Claude skill symlink: $link_path -> $skill_path"
+    ln -s "$skill_path" "$link_path"
   done
   shopt -u nullglob
 }

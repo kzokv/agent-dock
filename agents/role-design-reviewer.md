@@ -4,13 +4,6 @@
 
 Read-only governance review for UI/UX consistency, usability, and visual quality.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `figma-implement-design`
-- `screenshot`
-
-## Optional Skills
-
-- `playwright`
-- `doc`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

@@ -98,13 +98,6 @@ For complete operator workflow, required section formats, and verification steps
 - Missing risk/rollback details for high-impact changes.
 - Required CI checks failing at submission time.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `gh-address-comments`
-- `gh-fix-ci`
-
-## Optional Skills
-
-- `linear`
-- `git-gh-docker-fallback`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

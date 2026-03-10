@@ -63,12 +63,6 @@ Convert business goals into testable delivery slices with clear outcomes and exp
 - Conflicting priorities without decision owner.
 - Outcome goals incompatible with committed constraints.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-
-## Optional Skills
-
-- `linear`
-- `notion-spec-to-implementation`
-- `notion-meeting-intelligence`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

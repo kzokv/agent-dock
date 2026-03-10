@@ -14,6 +14,7 @@ import time
 from io import BytesIO
 from pathlib import Path
 
+from role_skill_matrix import load_matrix, set_enabled
 
 SCENARIOS = [
     {
@@ -211,22 +212,13 @@ def prepare_eval_home(shared_snapshot: Path, actual_shared_repo: Path, home_dir:
             shutil.rmtree(directory)
         directory.mkdir(parents=True, exist_ok=True)
 
-    manifest_path = shared_snapshot / "agents" / "skills" / "default-enabled-skills.txt"
     source_skill_root = shared_snapshot / "agents" / "skills"
-    if manifest_path.exists():
-        enabled = {
-            line.strip()
-            for line in manifest_path.read_text(encoding="utf-8").splitlines()
-            if line.strip() and not line.strip().startswith("#")
-        }
-        for skill_dir in sorted(source_skill_root.iterdir()):
-            if not skill_dir.is_dir() or skill_dir.name.startswith("."):
-                continue
-            destination = skills_dir if skill_dir.name in enabled else skills_library_dir
-            os.symlink(skill_dir, destination / skill_dir.name, target_is_directory=True)
-    else:
-        shutil.rmtree(skills_dir)
-        os.symlink(source_skill_root, skills_dir, target_is_directory=True)
+    enabled = set(set_enabled(load_matrix()))
+    for skill_dir in sorted(source_skill_root.iterdir()):
+        if not skill_dir.is_dir() or skill_dir.name.startswith("."):
+            continue
+        destination = skills_dir if skill_dir.name in enabled else skills_library_dir
+        os.symlink(skill_dir, destination / skill_dir.name, target_is_directory=True)
 
     return home_dir
 

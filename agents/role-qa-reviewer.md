@@ -4,12 +4,6 @@
 
 Read-only governance review for test quality, CI signal, and release readiness.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `gh-fix-ci`
-
-## Optional Skills
-
-- `playwright`
-- `screenshot`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

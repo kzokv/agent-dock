@@ -6,7 +6,7 @@ This directory defines a canonical multi-agent model with implementation roles p
 
 - `00-team-charter.md`: Team-wide mission, workflow, and governance.
 - `role-topology.md`: Canonical role map and capability ownership.
-- `skills-matrix.md`: Capability-tiered skill policy and role bindings.
+- `skills-matrix.md`: Authoritative role-to-skill bindings and enabled/install policy.
 - `review-checklist.md`: Shared review checklist and severity policy.
 
 ## Canonical Contracts
@@ -42,3 +42,4 @@ This directory defines a canonical multi-agent model with implementation roles p
 - Do not edit `config.toml` directly.
 - Run `scripts/test-onboarding.sh` when changing onboarding/config scripts.
 - Run `scripts/validate-role-skill-topology.py` after role/skills changes.
+- Canonical role files should point to `skills-matrix.md` instead of duplicating required/optional skill lists.

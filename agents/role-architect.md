@@ -64,12 +64,6 @@ Design evolvable system structure that satisfies functional and non-functional r
 - High-risk change without migration strategy.
 - NFR targets incompatible with committed scope.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `security-threat-model`
-
-## Optional Skills
-
-- `security-ownership-map`
-- `sentry`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

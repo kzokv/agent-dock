@@ -4,14 +4,6 @@
 
 Read-only governance review for backend contracts, reliability, and security risks.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `security-best-practices`
-- `security-threat-model`
-- `gh-address-comments`
-
-## Optional Skills
-
-- `security-ownership-map`
-- `sentry`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

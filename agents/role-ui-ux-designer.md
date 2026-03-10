@@ -4,13 +4,6 @@
 
 Owns UI/UX specifications, interaction patterns, and design-system fidelity.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `figma-implement-design`
-- `screenshot`
-
-## Optional Skills
-
-- `playwright`
-- `doc`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

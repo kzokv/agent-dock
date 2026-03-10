@@ -4,13 +4,6 @@
 
 Read-only governance review for frontend quality, accessibility, and maintainability risks.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `security-best-practices`
-- `gh-address-comments`
-
-## Optional Skills
-
-- `security-threat-model`
-- `playwright`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

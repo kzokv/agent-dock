@@ -64,16 +64,6 @@ Enable low-risk, repeatable delivery through stable pipelines, operational guard
 - Rollback confidence is insufficient for risky release.
 - Automation complexity exceeds maintainability threshold.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `gh-fix-ci`
-- `sentry`
-- `jupyter-notebook`
-
-## Optional Skills
-
-- `script-automation`
-- `security-ownership-map`
-- `render-deploy` (external)
-- `vercel-deploy` (external)
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

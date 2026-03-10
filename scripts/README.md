@@ -9,7 +9,7 @@
   - `generate_runtime_config` merges `config.base.toml` + `config.local.toml` into generated `config.toml`.
   - `migrate_legacy_skills` performs one-time migration from legacy `~/.codex/skills` to `~/.codex/agents/skills`.
   - `ensure_agents_skill_catalogs` rebuilds `$HOME/.agents/skills` as the enabled discovery subset and `$HOME/.agents/skills-library` as the archived remainder.
-  - `ensure_claude_skills_links` populates `$HOME/.claude/skills` with symlinks for enabled skills only.
+  - `ensure_claude_skills_links` populates `$HOME/.claude/skills` with per-skill symlinks for every installed skill.
   - `install_cursor_role_loader` copies `<repo>/.platforms/cursor/agents/codex-role-loader.md` as a regular file into `<cursor_home>/agents/` (default: `~/.cursor/agents/`). Overwrites any existing file and replaces stale symlinks at the destination.
   - `ensure_gh_token_secret` validates `gh` login and runs `gh auth login -h github.com` when needed so spawned sessions share the verified login state.
   - `--skip-gh-auth` disables GH bootstrap for non-interactive or CI-style runs.

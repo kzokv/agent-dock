@@ -4,13 +4,6 @@
 
 Read-only governance review for CI/CD reliability, infrastructure automation risk, and rollout safety.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `gh-fix-ci`
-- `sentry`
-- `script-automation`
-
-## Optional Skills
-
-- `security-ownership-map`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

@@ -63,12 +63,6 @@ Keep execution aligned with milestones through explicit dependency tracking, ris
 - Cross-team dependency misses without recovery plan.
 - Conflicting execution priorities without accountable owner.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-
-## Optional Skills
-
-- `linear`
-- `notion-spec-to-implementation`
-- `notion-meeting-intelligence`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.

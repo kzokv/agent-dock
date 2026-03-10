@@ -134,16 +134,27 @@ make_fixture() {
   local fixture_repo="$fixture_root/repo"
   mkdir -p "$fixture_repo/scripts"
   mkdir -p "$fixture_repo/agents/skills"
+  mkdir -p "$fixture_repo/agents"
   mkdir -p "$fixture_repo/.platforms/cursor/agents"
   mkdir -p "$fixture_root/default-bin"
   cp "$source_script" "$fixture_repo/scripts/onboarding.sh"
+  cp "$repo_root/scripts/role_skill_matrix.py" "$fixture_repo/scripts/role_skill_matrix.py"
   chmod +x "$fixture_repo/scripts/onboarding.sh"
   cp "$repo_root/.platforms/cursor/agents/codex-role-loader.md" \
     "$fixture_repo/.platforms/cursor/agents/codex-role-loader.md"
-  cat > "$fixture_repo/agents/skills/default-enabled-skills.txt" <<'ENABLED'
-enabled-skill
-support-skill
-ENABLED
+  cat > "$fixture_repo/agents/skills-matrix.md" <<'MATRIX'
+# Skills Matrix
+
+## Universal Optional Skills
+
+- `support-skill`
+
+## Canonical Role Skill Bindings
+
+| Role | Required Skills | Optional Skills |
+| --- | --- | --- |
+| `role-example` | `enabled-skill` | none |
+MATRIX
   mkdir -p \
     "$fixture_repo/agents/skills/enabled-skill" \
     "$fixture_repo/agents/skills/support-skill" \
@@ -448,8 +459,8 @@ BASE
 
   run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" --skip-gh-auth >/dev/null
 
-  assert_symlink_target_canonical "$enabled_link" "$fixture_home/.agents/skills/enabled-skill"
-  [ ! -e "$archived_link" ] || fail "Archived skills should not be mirrored into ~/.claude/skills"
+  assert_symlink_target_canonical "$enabled_link" "$fixture_repo/agents/skills/enabled-skill"
+  assert_symlink_target_canonical "$archived_link" "$fixture_repo/agents/skills/archived-skill"
 }
 
 test_gh_missing_fails_when_default_on() {

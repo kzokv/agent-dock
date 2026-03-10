@@ -64,12 +64,6 @@ Deliver accessible, performant, and maintainable frontend systems that match pro
 - Accessibility/performance regression beyond threshold.
 - Design ambiguity changing user-visible behavior.
 
-## Required Skills
+## Skill Binding
 
-- `openai-docs`
-- `figma-implement-design`
-- `playwright`
-
-## Optional Skills
-
-- `screenshot`
+Canonical required/optional skills for this role are defined in `agents/skills-matrix.md`.
