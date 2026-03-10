@@ -1,6 +1,6 @@
 ---
 name: continuous-learning
-description: Automatically extract reusable patterns from agent sessions and save them as learned skills or prompts for future use.
+description: Turn reusable session patterns into durable skills or prompts.
 origin: ECC
 ---
 

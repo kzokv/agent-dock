@@ -59,9 +59,9 @@ If `codex` is missing, onboarding installs it with `npm install -g @openai/codex
 
 - back up an existing target path (`~/.codex` by default) before creating the symlink
 - migrate legacy user skills from `~/.codex/skills` to `~/.codex/agents/skills` (one time)
-- maintain `$HOME/.agents/skills -> ~/.codex/agents/skills`
+- rebuild `$HOME/.agents/skills` as the enabled discovery subset and `$HOME/.agents/skills-library` as the archived remainder
 - expose tracked shared prompts at `~/.codex/prompts` through the existing `~/.codex -> codex-home` symlink model
-- populate `$HOME/.claude/skills` with per-skill symlinks that reference `$HOME/.agents/skills` so Claude-based helpers can discover the same skills
+- populate `$HOME/.claude/skills` with per-skill symlinks that mirror enabled skills only
 - upsert machine-local trust for this repo by rewriting only its `[projects."…"]` block in `config.local.toml`
 - regenerate `config.toml` from `config.base.toml` + `config.local.toml`
 - copy the Codex role-loader agent into `~/.cursor/agents` (or `--cursor-home` override) so Cursor can load role profiles from `~/.codex/agents`
@@ -92,7 +92,8 @@ Do not edit `config.toml` directly. Update `config.base.toml` and/or `config.loc
 
 - System skills: built-in Codex capabilities
 - User-level versioned source: `~/.codex/agents/skills`
-- User-level discovery path: `$HOME/.agents/skills`
+- User-level discovery path: `$HOME/.agents/skills` (enabled subset)
+- User-level archive path: `$HOME/.agents/skills-library`
 - This repo must not define `.agents/skills`
 - Other repos may define `<repo>/.agents/skills` for project-specific workflows
 
@@ -124,6 +125,40 @@ Check config migration hygiene:
 ./scripts/check-config-migration.sh
 ```
 
+Inspect bootstrap context cost:
+
+```bash
+./scripts/bootstrap-budget.sh --repo /path/to/project
+```
+
+Inspect bootstrap context cost as JSON:
+
+```bash
+./scripts/bootstrap-budget.sh --repo /path/to/project --json
+```
+
+The JSON output uses normalized skill paths so totals stay comparable across different checkout paths and temp snapshots.
+
+Build the local RLM-style retrieval catalog:
+
+```bash
+python3 ./scripts/rlm_retrieval.py build --repo /path/to/project
+python3 ./scripts/rlm_retrieval.py status --repo /path/to/project
+python3 ./scripts/rlm_retrieval.py query --repo /path/to/project --question "What is the repo ticket format rule?"
+```
+
+Use the shared retrieval prompt when a repo question would otherwise require opening several policy, worklog, prompt, or doc files:
+
+```text
+/prompts:retrieve
+```
+
+Run paired bootstrap quality evals with retrieval trials:
+
+```bash
+python3 ./scripts/run_bootstrap_evals.py --target-repo /path/to/project --json
+```
+
 Install required skills:
 
 ```bash
@@ -135,6 +170,8 @@ Enable local commit-msg hook:
 ```bash
 ./scripts/setup-git-hooks.sh
 ```
+
+Prompt-eval and retrieval evidence guidance lives in `docs/prompt-evals/`.
 
 ## Policy and merge gates
 

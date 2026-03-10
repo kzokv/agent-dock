@@ -34,8 +34,9 @@ print_help() {
   cat <<EOF_HELP
 Description:
   Link this repo to ~/.codex (or override target), migrate user skills to ~/.codex/agents/skills,
-  maintain ~/.agents/skills symlink, expose tracked shared prompts at ~/.codex/prompts via
-  the repo symlink, populate ~/.claude/skills with per-skill symlinks,
+  maintain ~/.agents/skills as the enabled discovery subset plus ~/.agents/skills-library as
+  the archived remainder, expose tracked shared prompts at ~/.codex/prompts via the repo
+  symlink, populate ~/.claude/skills with links for enabled skills only,
   regenerate config.toml from config.base.toml + config.local.toml,
   copy the Cursor role-loader agent into ~/.cursor/agents (or override target),
   bootstrap GitHub CLI auth, install the Codex CLI when missing, and install a codex-net
@@ -107,9 +108,11 @@ config_file="$repo_root/config.toml"
 timestamp="$(date +%Y%m%d%H%M%S)"
 project_header="[projects.\"$repo_root\"]"
 agents_home="$HOME/.agents"
-agents_skills_link="$agents_home/skills"
+agents_skills_dir="$agents_home/skills"
+agents_skills_library_dir="$agents_home/skills-library"
 codex_skills_dir="$codex_home/agents/skills"
 legacy_skills_dir="$codex_home/skills"
+enabled_skills_manifest="$repo_root/agents/skills/default-enabled-skills.txt"
 claude_home="$HOME/.claude"
 claude_skills_dir="$claude_home/skills"
 codex_cli_path=""
@@ -142,6 +145,18 @@ resolve_link_target_path() {
   else
     printf '%s/%s\n' "$(dirname "$link_path")" "$raw_target"
   fi
+}
+
+list_contains_line() {
+  local list="$1"
+  local needle="$2"
+  local line
+  while IFS= read -r line; do
+    [ "$line" = "$needle" ] && return 0
+  done <<EOF_LIST
+$list
+EOF_LIST
+  return 1
 }
 
 path_contains_dir() {
@@ -381,47 +396,93 @@ migrate_legacy_skills() {
   rmdir "$legacy_skills_dir"
 }
 
-ensure_agents_skills_link() {
+load_enabled_skill_names() {
+  if [ ! -f "$enabled_skills_manifest" ]; then
+    die "Enabled skills manifest not found: $enabled_skills_manifest"
+  fi
+
+  enabled_skill_names=""
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%%#*}"
+    line="$(printf '%s' "$line" | tr -d '[:space:]')"
+    [ -n "$line" ] || continue
+    if [ ! -d "$codex_skills_dir/$line" ]; then
+      die "Enabled skill listed in manifest but missing from source tree: $line"
+    fi
+    enabled_skill_names="${enabled_skill_names}${line}"$'\n'
+  done < "$enabled_skills_manifest"
+}
+
+ensure_managed_skill_dir() {
+  local dir_path="$1"
+  local marker_name="$2"
+
   mkdir -p "$agents_home"
+
+  if [ -L "$dir_path" ]; then
+    local backup_path
+    backup_path="${dir_path}.symlink.backup.$timestamp"
+    log "Managed skill path is a symlink; backing it up to: $backup_path"
+    mv "$dir_path" "$backup_path"
+  elif [ -e "$dir_path" ] && [ ! -d "$dir_path" ]; then
+    local backup_path
+    backup_path="${dir_path}.backup.$timestamp"
+    log "Managed skill path exists as a file; backing it up to: $backup_path"
+    mv "$dir_path" "$backup_path"
+  elif [ -d "$dir_path" ] && [ ! -f "$dir_path/$marker_name" ]; then
+    local backup_path
+    backup_path="${dir_path}.backup.$timestamp"
+    log "Managed skill path exists as an unmanaged directory; backing it up to: $backup_path"
+    mv "$dir_path" "$backup_path"
+  fi
+
+  mkdir -p "$dir_path"
+  find "$dir_path" -mindepth 1 -maxdepth 1 ! -name "$marker_name" -exec rm -rf {} +
+  : > "$dir_path/$marker_name"
+}
+
+ensure_agents_skill_catalogs() {
+  load_enabled_skill_names
 
   if [ ! -d "$codex_skills_dir" ]; then
     mkdir -p "$codex_skills_dir"
   fi
 
-  local target_canonical
-  target_canonical="$(canonical_path "$codex_skills_dir")"
+  ensure_managed_skill_dir "$agents_skills_dir" ".codex-enabled-skills"
+  ensure_managed_skill_dir "$agents_skills_library_dir" ".codex-library-skills"
 
-  if [ -L "$agents_skills_link" ]; then
-    local current_target current_path current_canonical
-    current_target="$(readlink "$agents_skills_link")"
-    current_path="$(resolve_link_target_path "$agents_skills_link")"
-    current_canonical="$(canonical_path "$current_path" 2>/dev/null || true)"
-    if [ -n "$current_canonical" ] && [ "$current_canonical" = "$target_canonical" ]; then
-      log "User skills symlink already correct: $agents_skills_link -> $current_target"
-      return 0
+  shopt -s nullglob
+  local skill_path skill_name
+  for skill_path in "$codex_skills_dir"/*/; do
+    skill_name="$(basename "$skill_path")"
+    if list_contains_line "$enabled_skill_names" "$skill_name"; then
+      log "Enabling skill in discovery path: $skill_name"
+      ln -s "$skill_path" "$agents_skills_dir/$skill_name"
+    else
+      log "Archiving skill outside discovery path: $skill_name"
+      ln -s "$skill_path" "$agents_skills_library_dir/$skill_name"
     fi
-
-    local backup_path
-    backup_path="${agents_skills_link}.symlink.backup.$timestamp"
-    log "User skills symlink points elsewhere; backing it up to: $backup_path"
-    mv "$agents_skills_link" "$backup_path"
-  elif [ -e "$agents_skills_link" ]; then
-    local backup_path
-    backup_path="${agents_skills_link}.backup.$timestamp"
-    log "Found existing path at $agents_skills_link; backing it up to: $backup_path"
-    mv "$agents_skills_link" "$backup_path"
-  fi
-
-  log "Creating user skills symlink: $agents_skills_link -> $codex_skills_dir"
-  ln -s "$codex_skills_dir" "$agents_skills_link"
+  done
+  shopt -u nullglob
 }
 
 ensure_claude_skills_links() {
   mkdir -p "$claude_skills_dir"
 
   shopt -s nullglob
-  local skill_path skill_name link_path rel_target
-  for skill_path in "$codex_skills_dir"/*/; do
+  local existing_path existing_target skill_path skill_name link_path rel_target
+  for existing_path in "$claude_skills_dir"/*; do
+    [ -L "$existing_path" ] || continue
+    existing_target="$(readlink "$existing_path")"
+    if [[ "$existing_target" = ../../.agents/skills/* ]] && [ ! -e "$agents_skills_dir/$(basename "$existing_path")" ]; then
+      log "Removing stale Claude skill symlink: $existing_path"
+      rm "$existing_path"
+    fi
+  done
+
+  local current_target
+  for skill_path in "$agents_skills_dir"/*; do
+    [ -L "$skill_path" ] || continue
     skill_name="$(basename "$skill_path")"
     link_path="$claude_skills_dir/$skill_name"
     rel_target="../../.agents/skills/$skill_name"
@@ -512,10 +573,10 @@ fi
 
 if [ -d "$codex_prompts_dir" ]; then
   log "Tracked shared prompts available via: $codex_prompts_dir"
-fi
+  fi
 
 migrate_legacy_skills
-ensure_agents_skills_link
+ensure_agents_skill_catalogs
 ensure_claude_skills_links
 install_cursor_role_loader
 

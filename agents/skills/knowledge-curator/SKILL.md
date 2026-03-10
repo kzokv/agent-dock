@@ -1,13 +1,13 @@
 ---
 name: knowledge-curator
-description: Classify durable knowledge from the current repository context, recommend the best destination, and keep handoff state concise.
+description: Capture durable repo knowledge and concise handoff state.
 origin: ECC
 ---
 
 # Knowledge Curator
 
 ## Purpose
-Capture durable knowledge from meaningful work using the shared knowledge-capture contract, route it to the single best destination, and keep handoff and Linear workflow state coherent.
+Capture durable knowledge from meaningful work using the shared policy plus on-demand capture prompts, route it to the single best destination, and keep handoff and workflow state coherent.
 
 ## Use This Skill When
 - A meaningful implementation, debugging, or refactor session produced durable knowledge.
@@ -22,7 +22,7 @@ Capture durable knowledge from meaningful work using the shared knowledge-captur
 - The request is to archive raw conversation history or dump transcripts.
 
 ## Required Inputs
-- The shared user-level `AGENTS.md` contract.
+- The shared user-level `AGENTS.md` defaults plus the relevant shared capture prompts when needed.
 - The active repository root.
 - The current session/task context.
 - Existing `AGENTS.md`, `.worklog/`, `docs/notes/`, and `docs/adr/` files when present.
@@ -30,7 +30,7 @@ Capture durable knowledge from meaningful work using the shared knowledge-captur
 If the repository layout is unclear, inspect the local files first and infer the existing structure before writing.
 
 ## Default Behavior
-- Read the shared user-level `AGENTS.md` first, then apply active repository `AGENTS.md` overrides.
+- Read the shared user-level `AGENTS.md` first, then the active repository `AGENTS.md`, and load shared capture prompts only when their more detailed workflow is needed.
 - Use repository markdown as the canonical destination for durable knowledge.
 - Prefer the standard layout unless the active repository defines a different durable destination.
 - Promote only repeated corrections, reusable workflows, meaningful decisions, or expensive-to-rediscover gotchas.
@@ -47,7 +47,7 @@ If the repository layout is unclear, inspect the local files first and infer the
 - For Linear-driven work, reconcile issue state with verified repository state and call out the required `Done` or `In Review` comment evidence when relevant.
 
 ## Workflow
-1. Inspect the shared user-level `AGENTS.md`, then the active repository's `AGENTS.md`, `.worklog/`, `docs/notes/`, and `docs/adr/` structure before drafting anything.
+1. Inspect the shared user-level `AGENTS.md`, then the active repository's `AGENTS.md`, and load the relevant shared capture prompt when you need more detailed capture or handoff guidance before drafting anything.
 2. Identify candidate items from the current task or maintenance pass.
 3. Filter out noise, transient chatter, and items that do not meet the promotion threshold.
 4. Classify each remaining item into exactly one best destination:
@@ -91,6 +91,6 @@ Return:
 - If the repository layout differs from the expected model, adapt to the nearest equivalent structure and record the assumption.
 
 ## References
-- The shared user-level `AGENTS.md` for knowledge-capture and Linear workflow defaults.
+- The shared user-level `AGENTS.md` for bootstrap defaults and invocation policy.
 - `AGENTS.md` in the active repository for storage and curation policy.
-- Shared prompt wrappers under `~/.codex/prompts/` for prompt-specific convenience flows.
+- Shared prompt wrappers under `~/.codex/prompts/` for detailed capture and handoff flows.

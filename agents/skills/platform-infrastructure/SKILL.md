@@ -1,6 +1,6 @@
 ---
 name: platform-infrastructure
-description: Help users build and scale internal platforms and technical infrastructure. Use when someone is deciding whether to build vs buy tooling, designing developer platforms, creating shared services, or managing technical debt at scale.
+description: Design internal platforms and shared infrastructure.
 ---
 
 # Platform Infrastructure

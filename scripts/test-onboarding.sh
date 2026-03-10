@@ -97,6 +97,12 @@ assert_symlink_target_canonical() {
   assert_eq "$got_canonical" "$want_canonical" "Symlink target mismatch for $link_path"
 }
 
+assert_is_directory() {
+  local dir_path="$1"
+  [ -d "$dir_path" ] || fail "Expected directory at $dir_path"
+  [ ! -L "$dir_path" ] || fail "Expected regular directory at $dir_path, not a symlink"
+}
+
 run_onboarding() {
   local fixture_home="$1"
   local fixture_repo="$2"
@@ -127,12 +133,21 @@ make_fixture() {
   fixture_roots+=("$fixture_root")
   local fixture_repo="$fixture_root/repo"
   mkdir -p "$fixture_repo/scripts"
+  mkdir -p "$fixture_repo/agents/skills"
   mkdir -p "$fixture_repo/.platforms/cursor/agents"
   mkdir -p "$fixture_root/default-bin"
   cp "$source_script" "$fixture_repo/scripts/onboarding.sh"
   chmod +x "$fixture_repo/scripts/onboarding.sh"
   cp "$repo_root/.platforms/cursor/agents/codex-role-loader.md" \
     "$fixture_repo/.platforms/cursor/agents/codex-role-loader.md"
+  cat > "$fixture_repo/agents/skills/default-enabled-skills.txt" <<'ENABLED'
+enabled-skill
+support-skill
+ENABLED
+  mkdir -p \
+    "$fixture_repo/agents/skills/enabled-skill" \
+    "$fixture_repo/agents/skills/support-skill" \
+    "$fixture_repo/agents/skills/archived-skill"
   cat > "$fixture_root/default-bin/codex" <<'STUB_CODEX'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -272,7 +287,11 @@ EOF_LOCAL
   block_count="$(rg -c --fixed-strings "[projects.\"$fixture_repo\"]" "$fixture_repo/config.local.toml")"
   assert_eq "$block_count" "1" "Project trust block should appear exactly once"
 
-  assert_symlink_target_canonical "$fixture_home/.agents/skills" "$fixture_repo/agents/skills"
+  assert_is_directory "$fixture_home/.agents/skills"
+  assert_is_directory "$fixture_home/.agents/skills-library"
+  assert_symlink_target_canonical "$fixture_home/.agents/skills/enabled-skill" "$fixture_repo/agents/skills/enabled-skill"
+  assert_symlink_target_canonical "$fixture_home/.agents/skills/support-skill" "$fixture_repo/agents/skills/support-skill"
+  assert_symlink_target_canonical "$fixture_home/.agents/skills-library/archived-skill" "$fixture_repo/agents/skills/archived-skill"
   [ -f "$loader_dst" ] || fail "Expected codex-role-loader.md at $loader_dst after first onboarding run"
 
   before_local="$(cat "$fixture_repo/config.local.toml")"
@@ -290,8 +309,11 @@ EOF_LOCAL
   if ls "$codex_home".symlink.backup.* >/dev/null 2>&1; then
     fail "No codex symlink backup should be created on idempotent re-run"
   fi
-  if ls "$fixture_home/.agents/skills".symlink.backup.* >/dev/null 2>&1; then
-    fail "No user skills backup should be created on idempotent re-run"
+  if ls "$fixture_home/.agents/skills".*backup.* >/dev/null 2>&1; then
+    fail "No enabled skills backup should be created on idempotent re-run"
+  fi
+  if ls "$fixture_home/.agents/skills-library".*backup.* >/dev/null 2>&1; then
+    fail "No archived skills backup should be created on idempotent re-run"
   fi
 }
 
@@ -379,7 +401,8 @@ BASE
   fi
 
   [ -L "$codex_home" ] || fail "Codex symlink should still exist"
-  assert_symlink_target_canonical "$fixture_home/.agents/skills" "$fixture_repo/agents/skills"
+  assert_is_directory "$fixture_home/.agents/skills"
+  assert_symlink_target_canonical "$fixture_home/.agents/skills/enabled-skill" "$fixture_repo/agents/skills/enabled-skill"
 }
 
 test_repo_skills_path_is_not_migrated() {
@@ -404,26 +427,29 @@ SKILL
   [ -f "$fixture_repo/skills/legacy-skill/SKILL.md" ] || fail "Repo-managed skills entries should remain in place"
   [ ! -f "$fixture_repo/agents/skills/legacy-skill/SKILL.md" ] || fail "Repo-managed skills should not be migrated into agents/skills"
   assert_file_contains "$fixture_root/onboarding.log" "Legacy skills path resolves to repo-managed skills; skipping migration"
-  assert_symlink_target_canonical "$fixture_home/.agents/skills" "$fixture_repo/agents/skills"
+  assert_is_directory "$fixture_home/.agents/skills"
+  assert_symlink_target_canonical "$fixture_home/.agents/skills/enabled-skill" "$fixture_repo/agents/skills/enabled-skill"
 }
 
 test_claude_skills_links_created() {
-  local fixture_root fixture_repo fixture_home codex_home claude_skill_link
+  local fixture_root fixture_repo fixture_home codex_home enabled_link archived_link
   fixture_root="$(make_fixture)"
   fixture_repo="$fixture_root/repo"
   fixture_home="$fixture_root/home"
   codex_home="$fixture_home/.codex"
-  claude_skill_link="$fixture_home/.claude/skills/claude-skill"
+  enabled_link="$fixture_home/.claude/skills/enabled-skill"
+  archived_link="$fixture_home/.claude/skills/archived-skill"
 
   cat > "$fixture_repo/config.base.toml" <<'BASE'
 model = "gpt-5"
 BASE
 
-  mkdir -p "$fixture_home" "$fixture_repo/agents/skills/claude-skill"
+  mkdir -p "$fixture_home"
 
   run_onboarding "$fixture_home" "$fixture_repo" "$codex_home" --skip-gh-auth >/dev/null
 
-  assert_symlink_target_canonical "$claude_skill_link" "$fixture_home/.agents/skills/claude-skill"
+  assert_symlink_target_canonical "$enabled_link" "$fixture_home/.agents/skills/enabled-skill"
+  [ ! -e "$archived_link" ] || fail "Archived skills should not be mirrored into ~/.claude/skills"
 }
 
 test_gh_missing_fails_when_default_on() {

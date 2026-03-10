@@ -1,6 +1,6 @@
 ---
 name: linear
-description: Manage issues, projects & team workflows in Linear. Use when the user wants to read, create or updates tickets in Linear.
+description: Read and update Linear issues, projects, and workflow state.
 metadata:
   short-description: Manage Linear issues in Codex
 ---

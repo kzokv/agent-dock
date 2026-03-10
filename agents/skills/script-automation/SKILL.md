@@ -1,6 +1,6 @@
 ---
 name: script-automation
-description: Create and maintain robust automation scripts across shell (bash/zsh), AppleScript, PowerShell, and Windows batch with consistent CLI behavior, strict flag parsing, deterministic non-interactive execution, and standardized help output. Use when a task requires creating or editing `.sh`, `.applescript`/`.scpt`, `.ps1`, or `.bat` scripts, especially for onboarding helpers, setup scripts, cross-platform script parity, or automation hardening.
+description: Build robust cross-platform automation scripts.
 ---
 
 # Script Automation

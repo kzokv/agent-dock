@@ -1,0 +1,14 @@
+doc
+find-skills
+frontend-design
+gh-fix-ci
+knowledge-curator
+linear
+nodejs-backend-patterns
+openai-docs
+pdf
+playwright
+screenshot
+script-automation
+spreadsheet
+webapp-testing

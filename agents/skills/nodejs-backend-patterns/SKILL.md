@@ -1,6 +1,6 @@
 ---
 name: nodejs-backend-patterns
-description: Build production-ready Node.js backend services with Express or Fastify, with clear architecture, validation, error handling, and operational defaults.
+description: Build Node.js backend services with solid defaults.
 ---
 
 # Node.js Backend Patterns

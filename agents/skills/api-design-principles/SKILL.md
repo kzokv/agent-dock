@@ -1,6 +1,6 @@
 ---
 name: api-design-principles
-description: Design or review REST and GraphQL APIs with clear resources, schemas, errors, versioning, and change management.
+description: Design or review REST and GraphQL APIs.
 ---
 
 # API Design Principles

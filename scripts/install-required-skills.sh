@@ -3,15 +3,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-INSTALLER="${REPO_ROOT}/agents/skills/.system/skill-installer/scripts/install-skill-from-github.py"
-DEST="${REPO_ROOT}/agents/skills"
+INSTALLER="${REPO_ROOT}/skills/.system/skill-installer/scripts/install-skill-from-github.py"
+SOURCE_DEST="${REPO_ROOT}/agents/skills"
 
 if [[ ! -f "${INSTALLER}" ]]; then
   echo "Installer not found: ${INSTALLER}" >&2
   exit 1
 fi
 
-mkdir -p "${DEST}"
+mkdir -p "${SOURCE_DEST}"
 
 # Required curated skills across canonical roles.
 # Optional external accelerators are intentionally excluded.
@@ -34,7 +34,7 @@ REQUIRED_SKILLS=(
 
 MISSING_PATHS=()
 for skill in "${REQUIRED_SKILLS[@]}"; do
-  if [[ -d "${DEST}/${skill}" ]]; then
+  if [[ -d "${SOURCE_DEST}/${skill}" ]]; then
     echo "Skip ${skill}: already installed"
     continue
   fi
@@ -46,10 +46,10 @@ if [[ "${#MISSING_PATHS[@]}" -eq 0 ]]; then
   exit 0
 fi
 
-echo "Installing missing required skills into ${DEST}..."
+echo "Installing missing required skills into ${SOURCE_DEST}..."
 python3 "${INSTALLER}" \
   --repo openai/skills \
-  --dest "${DEST}" \
+  --dest "${SOURCE_DEST}" \
   --path "${MISSING_PATHS[@]}"
 
-echo "Done. Restart Codex to pick up new skills."
+echo "Done. Rerun onboarding to rebuild \$HOME/.agents/skills and \$HOME/.agents/skills-library."

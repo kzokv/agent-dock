@@ -1,6 +1,6 @@
 ---
 name: git-gh-docker-fallback
-description: Provide Docker-based fallback wrappers for Git and GitHub CLI when native `git` and/or `gh` binaries are unavailable on the host. Use when a workflow requires Git or GitHub PR/CI operations in constrained environments (for example QNAP/NAS shells) and native tooling is missing.
+description: Use Docker wrappers when `git` or `gh` is unavailable.
 ---
 
 # Git/GH Docker Fallback

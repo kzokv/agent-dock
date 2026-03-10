@@ -9,6 +9,9 @@ Use one entry per model family and prompt revision.
 - Model name:
 - Prompt revision:
 - Overlay used:
+- Bootstrap tokens:
+- Session tokens:
+- Runtime warnings:
 
 ## Scenario Scores
 
@@ -18,6 +21,9 @@ Use one entry per model family and prompt revision.
 | Code review |  |  |
 | Prompt or plan generation |  |  |
 | Research with citations |  |  |
+| Retrieval: precise rule lookup |  |  |
+| Retrieval: worklog plus policy |  |  |
+| Retrieval: relation expansion |  |  |
 | Creative artifact |  |  |
 | Missing auth or missing tool fallback |  |  |
 | Ambiguous request needing clarification |  |  |
@@ -43,6 +49,7 @@ Use one entry per model family and prompt revision.
 | Unnecessary tool calls |  |  |
 | Completion of multi-step tasks |  |  |
 | Verbosity and token discipline |  |  |
+| Retrieval efficiency and slice discipline |  |  |
 | Backward compatibility |  |  |
 | Deterministic routing |  |  |
 | No-op behavior |  |  |
