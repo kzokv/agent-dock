@@ -46,9 +46,15 @@ Security rules:
 
 ## 2. Commit message rules
 
-Commits must use:
+By default, commits use:
 
 `type(scope): subject`
+
+In ticket-driven repositories, commits use:
+
+`type(scope): TICKET-ID: subject`
+
+The concrete `TICKET-ID` format is defined by repository policy, for example `LINEAR-TICKET`, `JIRA-KEY`, or another tracker token.
 
 Allowed types:
 
@@ -69,18 +75,24 @@ Examples:
 - `feat(onboarding): add config regeneration guard`
 - `fix(pr-gate): enforce testing evidence format`
 - `docs(runbook): add label selection guidance`
+- `feat(api): ABC-123: add settlement posting contract`
 
 ## 3. PR title, metadata, and body requirements
 
 ### PR title
 
-PR title must use:
+By default, PR title uses:
 
 `type(scope): subject`
+
+In ticket-driven repositories, PR title uses:
+
+`type(scope): TICKET-ID: subject`
 
 Example:
 
 - `docs(gitflow): consolidate operator runbook`
+- `feat(api): ABC-123: add settlement posting contract`
 
 ### Required metadata
 
@@ -109,6 +121,21 @@ PR body must include all sections:
 - `## Risk/Rollback`
 
 Use `.github/pull_request_template.md`.
+
+### Ticket-driven waiver path
+
+If repository policy requires ticket-gated naming and no related ticket is available in the current working session, the orchestrator should:
+
+- check branch name, recent commit subjects, current commit message draft, and known PR title/body draft context
+- ask whether to use the repository-defined waiver path
+- block non-compliant commit or PR-title flow if the user declines the waiver
+
+When a repository defines a waiver path, it should be repository-specific and human-controlled:
+
+- use the repository-defined waiver label
+- require a PR waiver section with rationale and scope
+- require an approver distinct from the PR author
+- require write-level access or higher for the approver
 
 ## 4. Testing section contract
 
@@ -158,7 +185,7 @@ gh pr edit <number> --add-assignee @me --add-label <label>
 
 `.github/workflows/pr-gate.yml` enforces:
 
-- scoped Conventional Commit title
+- scoped Conventional Commit title, or repository-defined ticket-gated title when applicable
 - required assignee
 - required primary label from allow-list (`bug`, `enhancement`, `documentation`)
 - required body sections
