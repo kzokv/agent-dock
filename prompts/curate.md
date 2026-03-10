@@ -8,6 +8,8 @@ Perform knowledge curation for this repository.
 
 Your goal is to improve knowledge quality, reduce duplication, and keep each file focused.
 
+Inspect the user-level shared `AGENTS.md` first, then the active repository `AGENTS.md` for overrides before applying this prompt.
+
 Review these locations if they exist:
 - `AGENTS.md`
 - `.worklog/`
@@ -15,13 +17,14 @@ Review these locations if they exist:
 - `docs/adr/`
 
 Tasks:
-1. Inspect `AGENTS.md`, `.worklog/`, `docs/notes/`, and `docs/adr/` before making any recommendation.
+1. Inspect the shared `AGENTS.md`, the active repository `AGENTS.md`, `.worklog/`, `docs/notes/`, and `docs/adr/` before making any recommendation.
 2. Identify stale, duplicate, noisy, or misplaced content.
 3. Find items in `.worklog/` that meet the durable promotion threshold: repeated corrections, reusable workflows, meaningful decisions, or expensive-to-rediscover gotchas.
 4. Find content in `AGENTS.md` that is too session-specific, too verbose, or better suited to notes.
 5. Find repeated procedures that may deserve a skill instead of living as scattered prose.
 6. Recommend a small number of high-value cleanups, not an endless laundry list.
-7. Preserve useful knowledge while reducing clutter.
+7. If the current task is Linear-driven, call out any mismatch between issue state, testing evidence, and verified repository state.
+8. Preserve useful knowledge while reducing clutter.
 
 Rules:
 - Do not rewrite everything just because you can.
@@ -34,6 +37,11 @@ Rules:
 - If nothing is stale, duplicated, misplaced, or promotion-worthy, say so explicitly as `no cleanup needed`.
 
 ## Output Format
+## Verified context
+- shared defaults read
+- repository overrides read
+- relevant files inspected
+
 ## Findings
 - issue
 - why it matters
@@ -44,6 +52,9 @@ Items that should move from `.worklog/` to durable docs.
 
 ## AGENTS cleanup
 Specific lines or sections that should be trimmed or moved.
+
+## Workflow or Linear checks
+State mismatches, evidence gaps, or `no mismatch found`.
 
 ## Skill candidates
 Repeatable workflows that may deserve a skill.

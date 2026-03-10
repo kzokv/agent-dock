@@ -6,6 +6,8 @@ Use this when a session produced a real decision that should become an ADR.
 ## Body
 Review the current task or session and determine whether it produced a decision that deserves an ADR.
 
+Inspect the user-level shared `AGENTS.md` first, then the active repository `AGENTS.md` for overrides before choosing an ADR destination.
+
 Use an ADR only if the session contains:
 - an architecture decision
 - a design tradeoff
@@ -20,9 +22,9 @@ Do not create an ADR for:
 - diary-style progress notes
 
 If an ADR is justified:
-1. Inspect existing ADRs under `docs/adr/` before drafting anything.
+1. Inspect the shared `AGENTS.md`, the active repository `AGENTS.md`, and existing ADRs under `docs/adr/` before drafting anything.
 2. Propose the next sensible ADR number. If none exists, start at `ADR-0001`.
-3. Propose a file name under `docs/adr/` using that ADR number and a short slug.
+3. Propose a file name under `docs/adr/` or the repository override using that ADR number and a short slug.
 4. Draft the ADR using this structure:
 
 ```md
@@ -50,6 +52,11 @@ If an ADR is not justified:
 - recommend the better destination instead, such as `docs/notes/` or `.worklog/latest-handoff.md`
 
 ## Output Format
+## Verified context
+- shared defaults read
+- repository overrides read
+- existing ADRs inspected
+
 ## ADR needed?
 Yes or No
 

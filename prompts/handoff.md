@@ -6,6 +6,8 @@ Use this before wrapping up a task or session so the next Codex session can resu
 ## Body
 Prepare a concise, high-signal handoff for the next session.
 
+Inspect the user-level shared `AGENTS.md` first, then the active repository `AGENTS.md` for overrides before drafting the handoff.
+
 Target file:
 `.worklog/latest-handoff.md`
 
@@ -14,6 +16,7 @@ Goals:
 2. Avoid repetition, narration, and transcript-like content.
 3. Be explicit about what is done, what remains, and what is uncertain.
 4. Make verification status explicit so the next session can distinguish done work from unverified work.
+5. If the task is Linear-driven, include any issue-state follow-up or close-out evidence that still matters.
 
 Use this structure:
 
@@ -50,13 +53,18 @@ Use this structure:
 ```
 
 Tasks:
-1. Inspect `.worklog/latest-handoff.md` if it exists before drafting a replacement.
+1. Inspect the shared `AGENTS.md`, the active repository `AGENTS.md`, and `.worklog/latest-handoff.md` if it exists before drafting a replacement.
 2. Infer the most useful handoff from the current context.
 3. If no meaningful resumability value remains, say so explicitly and keep the handoff minimal.
 4. Keep it short and operational.
 5. If there is already a `.worklog/latest-handoff.md`, produce an update that replaces stale content instead of blindly appending.
 
 ## Output Format
+## Verified context
+- shared defaults read
+- repository overrides read
+- existing handoff inspected
+
 ## Recommended update
 Provide the exact markdown for `.worklog/latest-handoff.md`
 

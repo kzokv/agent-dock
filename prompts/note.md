@@ -6,6 +6,8 @@ Use this when you already know something belongs in durable notes and want Codex
 ## Body
 Turn the important knowledge from the current task or session into a durable technical note.
 
+Inspect the user-level shared `AGENTS.md` first, then the active repository `AGENTS.md` for overrides before choosing a note destination.
+
 Rules:
 1. Write for teammates who were not present in the session.
 2. Capture useful technical knowledge, not chat residue.
@@ -14,8 +16,8 @@ Rules:
 5. Keep the note concise, structured, and easy to scan.
 
 Tasks:
-1. Inspect the most likely target note files under `docs/notes/` before drafting anything.
-2. Determine the most appropriate target file under `docs/notes/`.
+1. Inspect the shared `AGENTS.md`, the active repository `AGENTS.md`, and the most likely target note files under `docs/notes/` before drafting anything.
+2. Determine the most appropriate target file under `docs/notes/`, or the repository override if notes live elsewhere.
    Examples:
    - `docs/notes/debugging-gotchas.md`
    - `docs/notes/platform-quirks.md`
@@ -34,6 +36,11 @@ Preferred structure:
 ### Follow-up or caution
 
 ## Output Format
+## Verified context
+- shared defaults read
+- repository overrides read
+- relevant notes inspected
+
 ## Recommended file
 `path/to/file.md`
 

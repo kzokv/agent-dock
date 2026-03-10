@@ -21,10 +21,18 @@ Follow this sequence unless the user asks for a different mode of work:
 
 ## Knowledge Capture Defaults
 
-- Prefer repository markdown and repo policy files as the canonical home for durable knowledge.
-- When a repository defines a curation workflow, promote only repeated corrections, reusable workflows, meaningful decisions, or expensive-to-rediscover gotchas.
+- Use repository markdown and repo policy files as the canonical home for durable knowledge. Do not use Basic Memory MCP or any parallel memory store for this workflow.
+- The standard knowledge layout is:
+  - `AGENTS.md` for stable repo-wide rules and repeated corrections
+  - `docs/notes/` for durable technical notes, gotchas, caveats, and investigation outcomes
+  - `docs/adr/` for meaningful architecture, design, and strategy decisions with rationale
+  - `.worklog/latest-handoff.md` for transient resumability state
+- The active repository `AGENTS.md` may override destinations, paths, or workflow details. Follow local overrides after applying these shared defaults.
+- Promote only repeated corrections, reusable workflows, meaningful decisions, or expensive-to-rediscover gotchas.
+- Choose exactly one best destination per candidate item unless duplication is clearly justified.
 - Treat shared prompts as convenience wrappers; shared skills and repository `AGENTS.md` remain the durable contract.
-- For meaningful implementation, debugging, or handoff work, leave concise handoff state only when the active repository policy calls for it.
+- Keep `AGENTS.md` lean and durable. Do not put current task status, bug timelines, big narrative progress reports, personal reminders, or long architecture essays there.
+- For meaningful implementation, debugging, refactor, or handoff work, run curation and leave concise handoff state when resumability matters.
 
 ## Knowledge Capture Behavior
 
@@ -36,11 +44,20 @@ Follow this sequence unless the user asks for a different mode of work:
   - record a design or architecture decision in the repository's decision-log location
   - add a technical gotcha or discussion summary to the repository's durable note location
   - refresh the repository's handoff file if that repository uses one
-- Drive capture choices from conventions discovered in the active repository, not from `codex-home` path assumptions.
+- Drive capture choices from these shared defaults plus active repository overrides, not from guessed paths or `codex-home` path assumptions.
 - Use slash prompts and explicit skill invocation for structured capture work.
 - During a session, suggest promotion only when a real durable item appears. Structured capture normally starts with `/prompts:promote` or `$knowledge-curator`.
-- Before finishing a task, recommend `/prompts:handoff` only when resumability matters.
+- Before finishing meaningful implementation, debugging, refactor, or handoff work, run curation and refresh the handoff file when resumability matters.
+- Recommend `/prompts:handoff` only when resumability matters.
 - Use `/prompts:curate` or the curator skill for periodic cleanup and maintenance mode, not routine task flow.
+
+## Linear Workflow Defaults
+
+- For Linear-driven work, reconcile the relevant issue status with the verified repository state before finishing.
+- Use `Todo` for the single next-ready ticket or a very small set of execution-ready tickets with clear sequencing.
+- Keep tickets in `Backlog` when they are later in the queue, depend on unfinished upstream work, or still need scope refinement.
+- Use the `needs-refinement` label for tickets that are intentionally staying in `Backlog` because definitions, sequencing, or acceptance boundaries are not implementation-ready yet.
+- When moving a Linear issue to `Done` or `In Review`, leave a concise comment with implementation summary, exact testing evidence, and any remaining risk or follow-up that still matters.
 
 ## Output Contracts
 
