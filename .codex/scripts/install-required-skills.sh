@@ -4,16 +4,34 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 CODEX_ROOT="${REPO_ROOT}/.codex"
-INSTALLER="${CODEX_ROOT}/skills/.system/skill-installer/scripts/install-skill-from-github.py"
-SOURCE_DEST="${CODEX_ROOT}/skills"
 MATRIX_PARSER="${CODEX_ROOT}/scripts/role_skill_matrix.py"
+SCRIPT_PATH="${0##*/}"
 
-if [[ ! -f "${INSTALLER}" ]]; then
-  echo "Installer not found: ${INSTALLER}" >&2
-  exit 1
-fi
+print_help() {
+  cat <<EOF
+Description:
+  Verify that all required skills from .codex/agents/skills-matrix.md resolve in the local nested skill catalog.
 
-mkdir -p "${SOURCE_DEST}"
+Usage: ${SCRIPT_PATH} [OPTIONS]
+
+Options:
+  -h, --help          Show this help message and exit (optional)
+EOF
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      print_help
+      exit 0
+      ;;
+    *)
+      printf 'ERROR: Unknown flag %s\n' "$1" >&2
+      print_help
+      exit 1
+      ;;
+  esac
+done
 
 if [[ ! -f "${MATRIX_PARSER}" ]]; then
   echo "Matrix parser not found: ${MATRIX_PARSER}" >&2
@@ -22,24 +40,24 @@ fi
 
 mapfile -t REQUIRED_SKILLS < <(python3 "${MATRIX_PARSER}" --set required)
 
-MISSING_PATHS=()
-for skill in "${REQUIRED_SKILLS[@]}"; do
-  if [[ -d "${SOURCE_DEST}/${skill}" ]]; then
-    echo "Skip ${skill}: already installed"
-    continue
-  fi
-  MISSING_PATHS+=("skills/.curated/${skill}")
-done
+if [[ "${#REQUIRED_SKILLS[@]}" -eq 0 ]]; then
+  echo "No required skills are defined in the skills matrix."
+  exit 0
+fi
 
-if [[ "${#MISSING_PATHS[@]}" -eq 0 ]]; then
+set +e
+VALIDATION_OUTPUT="$(python3 "${MATRIX_PARSER}" --set required --validate-local-skills 2>&1)"
+VALIDATION_STATUS=$?
+set -e
+
+if [[ "${VALIDATION_STATUS}" -eq 0 ]]; then
   echo "All required skills are already installed."
   exit 0
 fi
 
-echo "Installing missing required skills into ${SOURCE_DEST}..."
-python3 "${INSTALLER}" \
-  --repo openai/skills \
-  --dest "${SOURCE_DEST}" \
-  --path "${MISSING_PATHS[@]}"
-
-echo "Done. Rerun onboarding to refresh the shared skill symlinks."
+echo "Required skill baseline is incomplete." >&2
+echo "${VALIDATION_OUTPUT}" >&2
+echo >&2
+echo "This repo now resolves required skills from the nested .codex/skills catalog." >&2
+echo "Add the missing local skills or update .codex/agents/skills-matrix.md so it only references shipped skills." >&2
+exit 1

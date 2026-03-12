@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 from role_skill_matrix import load_matrix
+from skill_catalog import SkillLookupError, load_skill_catalog
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CODEX_ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +51,7 @@ def validate_role_files_point_to_matrix(roles: dict[str, Path]) -> list[str]:
 
 def validate_matrix_role_bindings(roles: dict[str, Path]) -> list[str]:
     errors: list[str] = []
+    catalog = load_skill_catalog(SKILLS_DIR)
 
     try:
         matrix = load_matrix()
@@ -57,6 +60,7 @@ def validate_matrix_role_bindings(roles: dict[str, Path]) -> list[str]:
 
     matrix_roles = matrix["roles"]
     universal_optional = matrix["universal_optional"]
+    external_optional = set(matrix["external_optional"])
 
     unknown_roles = sorted(set(matrix_roles) - set(roles))
     for role_id in unknown_roles:
@@ -67,10 +71,16 @@ def validate_matrix_role_bindings(roles: dict[str, Path]) -> list[str]:
         errors.append(f"{AGENTS_DIR / 'skills-matrix.md'}: missing role binding row: {role_id}")
 
     for skill in universal_optional:
-        if not (SKILLS_DIR / skill).is_dir():
-            errors.append(
-                f"{AGENTS_DIR / 'skills-matrix.md'}: universal optional skill directory missing: .codex/skills/{skill}"
-            )
+        try:
+            catalog.resolve(skill)
+        except SkillLookupError as exc:
+            errors.append(f"{AGENTS_DIR / 'skills-matrix.md'}: {exc}")
+
+    for skill in sorted(external_optional):
+        try:
+            catalog.resolve(skill)
+        except SkillLookupError as exc:
+            errors.append(f"{AGENTS_DIR / 'skills-matrix.md'}: {exc}")
 
     for role_id, binding in matrix_roles.items():
         required_names = binding["required"]
@@ -95,15 +105,19 @@ def validate_matrix_role_bindings(roles: dict[str, Path]) -> list[str]:
             )
 
         for skill in required_names:
-            if not (SKILLS_DIR / skill).is_dir():
+            if skill in external_optional:
                 errors.append(
-                    f"{AGENTS_DIR / 'skills-matrix.md'}: required skill directory missing for {role_id}: .codex/skills/{skill}"
+                    f"{AGENTS_DIR / 'skills-matrix.md'}: external-context skill cannot be required for {role_id}: {skill}"
                 )
+            try:
+                catalog.resolve(skill)
+            except SkillLookupError as exc:
+                errors.append(f"{AGENTS_DIR / 'skills-matrix.md'}: {exc}")
         for skill in optional_names:
-            if not (SKILLS_DIR / skill).is_dir():
-                errors.append(
-                    f"{AGENTS_DIR / 'skills-matrix.md'}: optional skill directory missing for {role_id}: .codex/skills/{skill}"
-                )
+            try:
+                catalog.resolve(skill)
+            except SkillLookupError as exc:
+                errors.append(f"{AGENTS_DIR / 'skills-matrix.md'}: {exc}")
 
     return errors
 
@@ -167,7 +181,7 @@ def validate_capability_ownership(roles: dict[str, Path]) -> list[str]:
 def validate_skill_docs_hygiene() -> list[str]:
     errors: list[str] = []
 
-    for yaml_path in sorted(SKILLS_DIR.glob("*/agents/openai.yaml")):
+    for yaml_path in sorted(SKILLS_DIR.rglob("agents/openai.yaml")):
         for ln, line in enumerate(read_text(yaml_path).splitlines(), start=1):
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
@@ -176,7 +190,7 @@ def validate_skill_docs_hygiene() -> list[str]:
             if stripped.count('"') % 2 == 1:
                 errors.append(f"{yaml_path}:{ln}: odd number of double quotes")
 
-    for skill_md in sorted(SKILLS_DIR.glob("*/SKILL.md")):
+    for skill_md in sorted(SKILLS_DIR.rglob("SKILL.md")):
         for ln, line in enumerate(read_text(skill_md).splitlines(), start=1):
             if "skills/skills/" in line:
                 errors.append(f"{skill_md}:{ln}: invalid duplicated path prefix: skills/skills/")
@@ -195,6 +209,11 @@ def validate_repo_skill_policy() -> list[str]:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Validate .codex/agents role bindings against the nested .codex/skills catalog."
+    )
+    parser.parse_args()
+
     roles, role_errs = parse_canonical_roles()
     errors: list[str] = []
     errors.extend(role_errs)

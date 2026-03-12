@@ -42,5 +42,6 @@ All runtime skill paths above resolve to the same `.codex/skills` source.
 - Keep Codex-specific support tooling in `.codex/scripts`.
 - Keep `scripts/onboarding.sh` as the only supported operator onboarding entrypoint.
 - Keep agent-specific onboarding entrypoints under each tracked agent home.
+- Treat skill ids as repo-relative paths under `.codex/skills`, not as flat top-level directory names.
 - Keep helpers flag-driven with `-h/--help` support and deterministic non-interactive behavior.
 - Update `test-onboarding.sh` when onboarding symlink or bootstrap behavior changes.
