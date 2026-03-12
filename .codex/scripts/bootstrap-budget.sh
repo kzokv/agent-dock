@@ -109,41 +109,47 @@ function makeSkillPromptLine(name, description, filePath) {
   return `- ${name}: ${description} (file: ${filePath})`;
 }
 
-function collectSkillPromptLines(skillRoots, pathBuilder) {
+function collectSkillEntries(skillRoot, options = {}) {
+  const {
+    includeSystem = true,
+    excludeSystem = false,
+  } = options;
   const rows = [];
-  for (const root of skillRoots) {
-    if (!fs.existsSync(root)) continue;
-    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+  const seen = new Set();
+
+  function walk(currentDir) {
+    if (!fs.existsSync(currentDir)) return;
+
+    const skillMd = path.join(currentDir, "SKILL.md");
+    if (fs.existsSync(skillMd)) {
+      const relPath = path.relative(skillRoot, currentDir).split(path.sep).join("/");
+      const isSystem = relPath === ".system" || relPath.startsWith(".system/");
+      if ((!isSystem || includeSystem) && (!excludeSystem || !isSystem) && !seen.has(relPath)) {
+        const content = fs.readFileSync(skillMd, "utf8");
+        rows.push({
+          relPath,
+          name: parseFrontmatterValue(content, "name") || path.basename(currentDir),
+          description: parseFrontmatterValue(content, "description"),
+        });
+        seen.add(relPath);
+      }
+    }
+
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
-      const skillDir = path.join(root, entry.name);
-      const skillMd = path.join(skillDir, "SKILL.md");
-      if (!fs.existsSync(skillMd)) continue;
-      const content = fs.readFileSync(skillMd, "utf8");
-      const name = parseFrontmatterValue(content, "name") || entry.name;
-      const description = parseFrontmatterValue(content, "description");
-      rows.push(makeSkillPromptLine(name, description, pathBuilder(entry.name, name)));
+      walk(path.join(currentDir, entry.name));
     }
   }
+
+  walk(skillRoot);
+  rows.sort((a, b) => a.relPath.localeCompare(b.relPath));
   return rows;
 }
 
-function collectUserSkillLines() {
-  const skillRoot = path.join(repoRoot, ".codex/skills");
-  if (!fs.existsSync(skillRoot)) return [];
-  const names = fs.readdirSync(skillRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
-    .map((entry) => entry.name)
-    .sort();
-  const rows = [];
-  for (const name of names) {
-    const skillMd = path.join(repoRoot, ".codex/skills", name, "SKILL.md");
-    const skillContent = readIfExists(skillMd);
-    if (!skillContent) continue;
-    const skillName = parseFrontmatterValue(skillContent, "name") || name;
-    const description = parseFrontmatterValue(skillContent, "description");
-    rows.push(makeSkillPromptLine(skillName, description, `~/.codex/skills/${name}/SKILL.md`));
-  }
-  return rows;
+function collectSkillPromptLines(skillRoot, pathBuilder, options = {}) {
+  return collectSkillEntries(skillRoot, options).map((entry) =>
+    makeSkillPromptLine(entry.name, entry.description, pathBuilder(entry.relPath, entry.name))
+  );
 }
 
 function measureText(label, text, optional = false) {
@@ -162,7 +168,12 @@ if (fs.existsSync(repoAgentsPath) && canonical(repoAgentsPath) !== canonical(sha
   sections.push({ key: "repo_agents", ...measureText("repo AGENTS", fs.readFileSync(repoAgentsPath, "utf8")) });
 }
 
-const enabledUserSkillLines = collectUserSkillLines();
+const codexSkillRoot = path.join(repoRoot, ".codex/skills");
+const enabledUserSkillLines = collectSkillPromptLines(
+  codexSkillRoot,
+  (relPath) => `~/.codex/skills/${relPath}/SKILL.md`,
+  { excludeSystem: true }
+);
 sections.push({
   key: "user_skills",
   item_count: enabledUserSkillLines.length,
@@ -170,8 +181,8 @@ sections.push({
 });
 
 const systemSkillLines = collectSkillPromptLines(
-  [path.join(repoRoot, ".codex/skills/.system")],
-  (entryName) => `~/.codex/skills/.system/${entryName}/SKILL.md`
+  path.join(repoRoot, ".codex/skills/.system"),
+  (relPath) => `~/.codex/skills/.system/${relPath}/SKILL.md`
 );
 sections.push({
   key: "system_skills",
@@ -180,8 +191,8 @@ sections.push({
 });
 
 const repoSkillLines = collectSkillPromptLines(
-  [path.join(projectRoot, ".agents/skills")],
-  (entryName) => `<repo>/.agents/skills/${entryName}/SKILL.md`
+  path.join(projectRoot, ".agents/skills"),
+  (relPath) => `<repo>/.agents/skills/${relPath}/SKILL.md`
 );
 if (repoSkillLines.length > 0) {
   sections.push({

@@ -35,3 +35,4 @@ This directory defines the shared role and governance model consumed from `~/.co
 - Run `./.codex/scripts/test-onboarding.sh` when changing onboarding or config behavior.
 - Run `./.codex/scripts/validate-role-skill-topology.py` after role or skill changes.
 - Canonical role files should point to `~/.codex/agents/skills-matrix.md` instead of duplicating required or optional skill lists.
+- Skill ids in `skills-matrix.md` are repo-relative paths rooted at `~/.codex/skills`.

@@ -44,5 +44,6 @@ Deliver secure, maintainable, and valuable software through explicit ownership b
 ## Skills Baseline
 
 - Canonical role bindings live only in `~/.codex/agents/skills-matrix.md`.
+- Matrix skill ids resolve to repo-relative paths under `~/.codex/skills`.
 - `openai-docs` is a universal optional skill, not a universal requirement.
 - Required skills must reflect role-core capability rather than narrow external-context workflows.

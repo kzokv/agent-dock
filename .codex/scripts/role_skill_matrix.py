@@ -10,6 +10,8 @@ import sys
 from collections import OrderedDict
 from pathlib import Path
 
+from skill_catalog import SkillLookupError, load_skill_catalog
+
 CODEX_ROOT = Path(__file__).resolve().parents[1]
 MATRIX_PATH = CODEX_ROOT / "agents" / "skills-matrix.md"
 SKILLS_DIR = CODEX_ROOT / "skills"
@@ -68,10 +70,12 @@ def parse_role_rows(block: str) -> OrderedDict[str, dict[str, list[str]]]:
 def load_matrix() -> dict[str, object]:
     text = read_text(MATRIX_PATH)
     universal = parse_bullets(parse_section(text, "Universal Optional Skills"))
+    external = parse_bullets(parse_section(text, "External-Context Optional Skills"))
     role_rows = parse_role_rows(parse_section(text, "Canonical Role Skill Bindings"))
     return {
         "path": str(MATRIX_PATH),
         "universal_optional": universal,
+        "external_optional": external,
         "roles": role_rows,
     }
 
@@ -94,11 +98,14 @@ def set_enabled(matrix: dict[str, object]) -> list[str]:
 
 
 def validate_local_skills(skills: list[str]) -> list[str]:
-    missing = []
+    catalog = load_skill_catalog(SKILLS_DIR)
+    errors = []
     for skill in skills:
-        if not (SKILLS_DIR / skill).is_dir():
-            missing.append(skill)
-    return missing
+        try:
+            catalog.resolve(skill)
+        except SkillLookupError as exc:
+            errors.append(str(exc))
+    return errors
 
 
 def main() -> int:
@@ -112,7 +119,7 @@ def main() -> int:
     parser.add_argument(
         "--validate-local-skills",
         action="store_true",
-        help="Fail if any emitted skill or matrix-referenced skill is missing locally",
+        help="Fail if any emitted skill or matrix-referenced skill cannot be resolved locally",
     )
     args = parser.parse_args()
 
@@ -143,10 +150,13 @@ def main() -> int:
                 role_skills.extend(role_data["required"])
                 role_skills.extend(role_data["optional"])
             role_skills.extend(matrix["universal_optional"])
+            role_skills.extend(matrix["external_optional"])
             skills_to_check = unique_ordered(role_skills)
-        missing = validate_local_skills(skills_to_check)
-        if missing:
-            print("ERROR: missing local skills: " + ", ".join(missing), file=sys.stderr)
+        errors = validate_local_skills(skills_to_check)
+        if errors:
+            print("ERROR: local skill validation failed:", file=sys.stderr)
+            for error in errors:
+                print(f"- {error}", file=sys.stderr)
             return 1
 
     if args.json:

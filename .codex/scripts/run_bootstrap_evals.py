@@ -224,9 +224,9 @@ def run_variant(
     timeout_seconds: int,
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
-    budget_script = shared_snapshot / "scripts" / "bootstrap-budget.sh"
+    budget_script = shared_snapshot / ".codex" / "scripts" / "bootstrap-budget.sh"
     if not budget_script.exists():
-        budget_script = fallback_shared_repo / "scripts" / "bootstrap-budget.sh"
+        budget_script = fallback_shared_repo / ".codex" / "scripts" / "bootstrap-budget.sh"
     budget = json.loads(
         subprocess.check_output(
             [
@@ -379,7 +379,7 @@ def compare_variants(baseline: dict, candidate: dict) -> dict:
 
 def run_retrieval_trials(shared_snapshot: Path, target_snapshot: Path, output_dir: Path) -> list[dict]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    retrieval_script = shared_snapshot / "scripts" / "rlm_retrieval.py"
+    retrieval_script = shared_snapshot / ".codex" / "scripts" / "rlm_retrieval.py"
     subprocess.check_call(
         ["python3", str(retrieval_script), "build", "--repo", str(shared_snapshot)],
         stdout=subprocess.DEVNULL,
@@ -418,10 +418,10 @@ def run_retrieval_trials(shared_snapshot: Path, target_snapshot: Path, output_di
             name="skill_to_script_to_doc",
             retrieval_script=retrieval_script,
             repo=shared_snapshot,
-            handle=".codex/skills/playwright/SKILL.md",
+            handle=".codex/skills/engineering/runbook-generator/SKILL.md",
             expected_handles={
-                ".codex/skills/playwright/scripts/playwright_cli.sh",
-                ".codex/skills/playwright/references/cli.md",
+                ".codex/skills/engineering/runbook-generator/scripts/runbook_generator.py",
+                ".codex/skills/engineering/runbook-generator/references/runbook-templates.md",
             },
             output_dir=output_dir,
         )
