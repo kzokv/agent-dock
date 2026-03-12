@@ -1,0 +1,87 @@
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+personality = "pragmatic"
+
+[features]
+multi_agent = true
+
+[agents.architect]
+description = "Cross-cutting system architecture owner and governance gate."
+config_file = "agents/config/architect.toml"
+
+[agents."product-manager"]
+description = "Owns product intent, scope clarity, and acceptance framing."
+config_file = "agents/config/product-manager.toml"
+
+[agents."project-manager"]
+description = "Owns execution coordination, sequencing, and delivery tracking."
+config_file = "agents/config/project-manager.toml"
+
+[agents."frontend-engineer"]
+description = "Implements frontend behavior, accessibility, and UI quality."
+config_file = "agents/config/frontend-engineer.toml"
+
+[agents."backend-engineer"]
+description = "Implements backend domain logic, APIs, and data workflows."
+config_file = "agents/config/backend-engineer.toml"
+
+[agents."qa-engineer"]
+description = "Builds and executes risk-based validation strategies and quality gates."
+config_file = "agents/config/qa-engineer.toml"
+
+[agents."ui-ux-designer"]
+description = "Owns UI/UX specs, design-system guidance, and interaction quality."
+config_file = "agents/config/ui-ux-designer.toml"
+
+[agents.devops]
+description = "Owns CI/CD reliability, infrastructure automation, and release safety."
+config_file = "agents/config/devops.toml"
+
+[agents."technical-writer"]
+description = "Owns end-user and engineering documentation quality."
+config_file = "agents/config/technical-writer.toml"
+
+[agents."git-orchestrator"]
+description = "Executes branch/commit/PR/release-note workflow without overriding governance blockers."
+config_file = "agents/config/git-orchestrator.toml"
+
+[agents."frontend-reviewer"]
+description = "Reviews frontend architecture, performance, and accessibility risks."
+config_file = "agents/config/frontend-reviewer.toml"
+
+[agents."backend-reviewer"]
+description = "Reviews backend contracts, reliability, and maintainability risks."
+config_file = "agents/config/backend-reviewer.toml"
+
+[agents."qa-reviewer"]
+description = "Reviews test strategy quality, coverage risks, and CI signal health."
+config_file = "agents/config/qa-reviewer.toml"
+
+[agents."database-reviewer"]
+description = "Reviews schema design, migration safety, and data integrity risks."
+config_file = "agents/config/database-reviewer.toml"
+
+[agents."design-reviewer"]
+description = "Reviews UI/UX fidelity, interaction consistency, and usability risks."
+config_file = "agents/config/design-reviewer.toml"
+
+[agents."devops-reviewer"]
+description = "Reviews CI/CD reliability, infrastructure automation, and rollout safety risks."
+config_file = "agents/config/devops-reviewer.toml"
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
+startup_timeout_sec = 30
+
+[mcp_servers.linear]
+url = "https://mcp.linear.app/mcp"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+startup_timeout_sec = 30
+
+[notice.model_migrations]
+"gpt-5.1-codex-mini" = "gpt-5.4"
+"gpt-5.3-codex" = "gpt-5.4"

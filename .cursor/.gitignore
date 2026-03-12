@@ -1,0 +1,24 @@
+# Ignore everything in .cursor
+*
+# Allow the tracked Codex loader for Cursor agents
+!agents/
+agents/*
+!agents/load-codex.md
+# Keep project, plugin, and built-in skill caches ignored
+# User's personal skills
+!skills/
+!skills/**
+!scripts/
+!scripts/**
+# User's personal slash commands
+!commands/
+!commands/**
+# User's plan files
+!plans/
+!plans/**
+# Subagent state/transcripts
+!subagents/
+!subagents/**
+# User-level cursor rules
+!rules/
+!rules/**
