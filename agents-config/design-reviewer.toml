@@ -1,4 +1,0 @@
-model = "gpt-5.3-codex"
-reasoning_effort = "high"
-sandbox_mode = "read-only"
-execution = "sub"

@@ -25,12 +25,31 @@ __pycache__/
 *.pyo
 
 # Local environment
-config.local.toml
-config.toml
+.codex/config.local.toml
+.codex/config.toml
+.codex/agents/config/*.toml
 
 # Auto generated system skills
-skills/.system/
-agents/skills/.system/
+.codex/skills/.system/
+
+# Repo-local .codex runtime artifacts
+.codex/history.jsonl
+.codex/models_cache.json
+.codex/version.json
+.codex/log/
+.codex/tmp/
+.codex/cache/
+.codex/sessions/
+.codex/archived_sessions/
+.codex/*.sqlite
+.codex/*.sqlite-shm
+.codex/*.sqlite-wal
+.codex/**/*.sqlite
+.codex/**/*.sqlite-shm
+.codex/**/*.sqlite-wal
+.codex/**/__pycache__/
+.codex/**/*.pyc
+.codex/**/*.pyo
 
 # Session 
 session_index.jsonl

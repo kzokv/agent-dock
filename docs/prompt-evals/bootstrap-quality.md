@@ -18,12 +18,12 @@ Use this harness when bootstrap prompt changes need proof that lower startup tok
 ## Runner
 
 ```bash
-python3 ./scripts/run_bootstrap_evals.py --target-repo /path/to/project --json
+python3 ./.codex/scripts/run_bootstrap_evals.py --target-repo /path/to/project --json
 ```
 
 The runner compares a baseline snapshot from `git archive <ref>` against the current worktree candidate. It records:
 
-- bootstrap and session token budgets from `scripts/bootstrap-budget.sh --json`
+- bootstrap and session token budgets from `.codex/scripts/bootstrap-budget.sh --json`
 - normalized path accounting for skill-path cost comparisons
 - 3 paired output-quality scenarios
 - 3 retrieval-specific trials

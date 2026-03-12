@@ -16,7 +16,7 @@ permalink: codex-home/memory/workflow-and-policy-notes
   - Destination routed to `codex-home` based on explicit override: codex-home.
   - Durable Codex workflow guidance changed and should live in user-level memory.
 - Artifacts:
-  - /Users/lume/repos/codex-home/agents/skills/sync-project-memory/SKILL.md
+  - /Users/lume/repos/codex-home/.codex/skills/sync-project-memory/SKILL.md
 - Verification:
   - No verification commands detected.
 - Open Risks:

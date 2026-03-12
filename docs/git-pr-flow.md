@@ -2,21 +2,23 @@
 
 This is the canonical operator runbook for Git/PR workflow in this repository.
 
-Policy source of truth remains `AGENTS.md`.
+Policy source of truth remains `.codex/AGENTS.md`.
 
 ## 1. Local setup
 
 Enable local commit-message enforcement immediately after cloning:
 
 ```bash
-./scripts/setup-git-hooks.sh
+./.codex/scripts/setup-git-hooks.sh
 ```
 
 This configures `core.hooksPath=.githooks` so local commits are validated by `.githooks/commit-msg`.
 
 ## 1.1 GitHub CLI auth for agent workflows
 
-`./scripts/onboarding.sh` validates your `gh` CLI auth, runs `gh auth login -h github.com` when required, installs the Codex CLI with `npm install -g @openai/codex` when `codex` is missing, and installs the `codex-net` helper so you can launch network-enabled sessions without typing long sandbox flags. The helper lives under `$XDG_BIN_HOME` when set; otherwise onboarding defaults to `~/bin` on macOS and `~/.local/bin` on other platforms, and warns if that directory is not on your `PATH`. Onboarding also copies the Codex role-loader agent into `~/.cursor/agents` so Cursor can load role profiles from `~/.codex/agents`; use `--cursor-home PATH` to target a custom Cursor directory.
+`./scripts/onboarding.sh` validates your `gh` CLI auth by default, always wires the shared `~/.codex` and `~/.agents/skills` paths, and can also install the Codex CLI plus `codex-net` when Codex bootstrap runs.
+
+The canonical onboarding reference, including side effects, topology, and flow diagrams, lives in [`docs/onboarding.md`](/Users/lume/repos/codex-home/docs/onboarding.md).
 
 Once onboarding succeeds, use:
 
