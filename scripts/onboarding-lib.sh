@@ -436,73 +436,165 @@ install_claude_dev_launcher() {
 
   launcher_bin_dir="$(resolve_launcher_bin_dir)"
   claude_dev_launcher="$launcher_bin_dir/claude-dev"
-  launcher_content="$(cat <<EOF
+  launcher_content="$(cat <<'LAUNCHER_EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-default_claude_path="$claude_cli_path"
-resolved_claude_path="\$(command -v claude 2>/dev/null || true)"
-
-if [ -z "\$resolved_claude_path" ] && [ -x "\$default_claude_path" ]; then
-  resolved_claude_path="\$default_claude_path"
-fi
-
-if [ -z "\$resolved_claude_path" ]; then
-  printf 'claude-dev: unable to locate the Claude CLI. Rerun onboarding or install claude.\\n' >&2
+# ── Section 1: Locate Claude CLI ──────────────────────────────────────
+LAUNCHER_EOF
+)"
+  # Inject the literal claude_cli_path (expanded at install time)
+  launcher_content+="
+default_claude_path=\"$claude_cli_path\""
+  launcher_content+='
+resolved_claude_path="$(command -v claude 2>/dev/null || true)"
+[[ -z "$resolved_claude_path" && -x "$default_claude_path" ]] && resolved_claude_path="$default_claude_path"
+if [[ -z "$resolved_claude_path" ]]; then
+  printf '\''claude-dev: unable to locate the Claude CLI. Rerun onboarding or install claude.\n'\'' >&2
   exit 1
 fi
 
-# Parse launcher-specific flags; forward everything else to claude
+# ── Section 2: Parse launcher flags ───────────────────────────────────
 use_tmux=1
+worktree_path="${CLAUDE_DEV_WORKTREE:-}"
+session_name="${CLAUDE_DEV_TMUX_SESSION:-claude-work}"
 claude_args=()
-while [ \$# -gt 0 ]; do
-  case "\$1" in
-    --no-tmux)
-      use_tmux=0
-      shift
-      ;;
-    *)
-      claude_args+=("\$1")
-      shift
-      ;;
+[[ "${CLAUDE_DEV_NO_TMUX:-0}" = "1" ]] && use_tmux=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-tmux)   use_tmux=0; shift ;;
+    --worktree)  worktree_path="${2:?claude-dev: --worktree requires a path}"; shift 2 ;;
+    --session)   session_name="${2:?claude-dev: --session requires a name}"; shift 2 ;;
+    --)          shift; claude_args+=("$@"); break ;;
+    *)           claude_args+=("$1"); shift ;;
   esac
 done
 
-# User opted out: exec directly
-if [ "\$use_tmux" = "0" ]; then
-  exec "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+# Helper: true when we should show interactive prompts
+_interactive() {
+  [[ -t 0 && ${#claude_args[@]} -eq 0 ]]
+}
+
+# Resolve worktree base directory (.claude/worktrees/ relative to repo root)
+worktree_base=""
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+  worktree_base="$(git rev-parse --show-toplevel)/.claude/worktrees"
 fi
 
-# tmux not available: warn and fall back
-if ! command -v tmux >/dev/null 2>&1; then
-  printf 'claude-dev: tmux not found; agent teams will use in-process mode\\n' >&2
-  exec "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+# Resolve relative --worktree values against the worktree base
+if [[ -n "$worktree_path" && "$worktree_path" != /* && -n "$worktree_base" ]]; then
+  worktree_path="$worktree_base/$worktree_path"
 fi
 
-session_name="\${CLAUDE_DEV_TMUX_SESSION:-claude-work}"
+# Create worktree if it does not exist yet (auto-create from HEAD)
+_ensure_worktree() {
+  local wt_dir="$1"
+  [[ -d "$wt_dir" ]] && return 0
+  local branch_name
+  branch_name="$(basename "$wt_dir")"
+  mkdir -p "$(dirname "$wt_dir")"
+  if git show-ref --verify "refs/heads/$branch_name" &>/dev/null; then
+    git worktree add "$wt_dir" "$branch_name"
+  else
+    git worktree add -b "$branch_name" "$wt_dir" HEAD
+  fi
+}
+
+# ── Section 3: Interactive tmux prompt ────────────────────────────────
+if [[ "$use_tmux" = "1" ]] && _interactive && [[ -z "$worktree_path" ]]; then
+  read -r -p "Use tmux session? [Y/n] " tmux_ans
+  [[ "$tmux_ans" =~ ^[Nn] ]] && use_tmux=0
+  if [[ "$use_tmux" = "1" ]]; then
+    read -r -p "Session name (default: $session_name): " sn_ans
+    [[ -n "$sn_ans" ]] && session_name="$sn_ans"
+  fi
+fi
+
+# ── Section 4: Interactive worktree picker ────────────────────────────
+# Shows worktrees under .claude/worktrees/ and offers to create new ones
+if [[ -z "$worktree_path" && -n "$worktree_base" ]] && _interactive; then
+  wt_paths=()
+  wt_branches=()
+  wt_base_resolved="$(mkdir -p "$worktree_base" && cd "$worktree_base" && pwd -P)"
+  while IFS=$'\''\t'\'' read -r wt_p wt_b; do
+    resolved_wt="$(cd "$wt_p" 2>/dev/null && pwd -P)" || continue
+    # Only include worktrees that live under .claude/worktrees/
+    [[ "$resolved_wt" = "$wt_base_resolved"/* ]] || continue
+    wt_paths+=("$wt_p")
+    wt_branches+=("${wt_b##refs/heads/}")
+  done < <(
+    git worktree list --porcelain | awk '\''
+      /^worktree / { wt = substr($0, 10) }
+      /^branch /   { br = substr($0, 8); print wt "\t" br }
+    '\''
+  )
+
+  echo "Launch in a worktree?"
+  echo "  1) current directory (normal)"
+  for i in "${!wt_paths[@]}"; do
+    wt_resolved="$(cd "${wt_paths[$i]}" 2>/dev/null && pwd -P)"
+    wt_short="${wt_resolved#"$wt_base_resolved"/}"
+    printf "  %d) %s  [%s]\n" "$((i + 2))" "$wt_short" "${wt_branches[$i]}"
+  done
+  new_opt=$(( ${#wt_paths[@]} + 2 ))
+  custom_opt=$(( new_opt + 1 ))
+  printf "  %d) create new worktree\n" "$new_opt"
+  printf "  %d) create new worktree (custom path)\n" "$custom_opt"
+  read -r -p "Pick [1]: " pick
+  pick="${pick:-1}"
+  if [[ "$pick" =~ ^[0-9]+$ ]]; then
+    if [[ "$pick" -ge 2 && "$pick" -le $(( ${#wt_paths[@]} + 1 )) ]]; then
+      worktree_path="${wt_paths[$((pick - 2))]}"
+    elif [[ "$pick" -eq "$new_opt" ]]; then
+      read -r -p "Worktree name (becomes branch name): " wt_name
+      [[ -n "$wt_name" ]] && worktree_path="$worktree_base/$wt_name"
+    elif [[ "$pick" -eq "$custom_opt" ]]; then
+      read -r -p "Worktree name (becomes branch name): " wt_name
+      if [[ -n "$wt_name" ]]; then
+        while true; do
+          read -r -p "Absolute path: " custom_path
+          [[ "$custom_path" == /* ]] && break
+          echo "Path must be absolute (start with /)"
+        done
+        worktree_path="$custom_path"
+      fi
+    fi
+  fi
+fi
+
+# ── Section 5: Assemble args and exec ─────────────────────────────────
+if [[ -n "$worktree_path" ]]; then
+  _ensure_worktree "$worktree_path"
+  cd "$worktree_path" || { printf '\''claude-dev: cannot cd to worktree %s\n'\'' "$worktree_path" >&2; exit 1; }
+fi
+
+if [[ "$use_tmux" = "0" ]] || ! command -v tmux >/dev/null 2>&1; then
+  [[ "$use_tmux" = "1" ]] && printf '\''claude-dev: tmux not found; launching directly\n'\'' >&2
+  exec "$resolved_claude_path" --dangerously-skip-permissions "${claude_args[@]+"${claude_args[@]}"}"
+fi
 
 # Already inside tmux: create dedicated session and switch to it
-if [ -n "\${TMUX:-}" ]; then
-  current_session="\$(tmux display-message -p '#S')"
-  if [ "\$current_session" = "\$session_name" ]; then
-    exec "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+if [[ -n "${TMUX:-}" ]]; then
+  current_session="$(tmux display-message -p '\''#S'\'')"
+  if [[ "$current_session" = "$session_name" ]]; then
+    exec "$resolved_claude_path" --dangerously-skip-permissions "${claude_args[@]+"${claude_args[@]}"}"
   fi
-  if ! tmux has-session -t "\$session_name" 2>/dev/null; then
-    tmux new-session -d -s "\$session_name" \\
-      "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+  if ! tmux has-session -t "$session_name" 2>/dev/null; then
+    tmux new-session -d -s "$session_name" \
+      "$resolved_claude_path" --dangerously-skip-permissions "${claude_args[@]+"${claude_args[@]}"}"
   fi
-  exec tmux switch-client -t "\$session_name"
+  exec tmux switch-client -t "$session_name"
 fi
 
 # Not in tmux: create/attach session
-exec tmux new-session -A -s "\$session_name" \\
-  "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
-EOF
-)"
+exec tmux new-session -A -s "$session_name" \
+  "$resolved_claude_path" --dangerously-skip-permissions "${claude_args[@]+"${claude_args[@]}"}"
+'
 
   mkdir -p "$launcher_bin_dir"
   write_executable_file_atomic "$claude_dev_launcher" "$launcher_content"
-  log "Installed Claude permission-skipping launcher: $claude_dev_launcher"
+  log "Installed Claude interactive launcher: $claude_dev_launcher"
 
   if ! path_contains_dir "$launcher_bin_dir"; then
     log "Launcher directory is not on PATH. Add this to your shell profile:"
