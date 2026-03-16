@@ -5,7 +5,7 @@ Personal coding-agent config repo shared across machines.
 This repository now manages three tracked agent homes:
 - `.codex` for shared policy, roles, prompts, skills, config, and support scripts
 - `.cursor` for a tracked `agents` symlink to `.codex/agents` and a tracked `skills` symlink to `.codex/skills`
-- `.claude` for a tracked `skills` symlink to `.codex/skills`
+- `.claude` for tracked agents, rules, skills symlink, versioned memory, and base settings
 
 `README.md` is the operator guide. The shared Codex policy source of truth lives at `.codex/AGENTS.md`.
 
@@ -52,6 +52,14 @@ If you want the Codex CLI network-enabled launcher, run onboarding with Codex bo
 
 ```bash
 codex-net
+```
+
+After Claude onboarding, use the permission-skipping launcher:
+
+```bash
+claude-dev                                       # tmux session + claude
+claude-dev --no-tmux                             # bypass tmux, run directly
+CLAUDE_DEV_TMUX_SESSION=work2 claude-dev         # custom session name
 ```
 
 Canonical onboarding reference:

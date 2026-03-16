@@ -72,3 +72,15 @@ cache/**
 .claude/.credentials.json
 .claude/file-history/
 .claude/plugins/
+.claude/plans/
+.claude/paste-cache/
+.claude/mcp*.json
+
+# Claude Code tracked files (override ignores above)
+!.claude/settings.base.json
+!.claude/rules/
+!.claude/rules/**
+!.claude/agents/
+!.claude/agents/**
+!.claude/memory/
+!.claude/memory/**

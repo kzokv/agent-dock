@@ -65,6 +65,9 @@ flowchart TD
     C --> NPM[npm]
     C --> CX[codex CLI]
     C --> NET[codex-net launcher]
+    A --> CSET[settings merge]
+    A --> CMEM[memory symlink]
+    A --> CDEV[claude-dev launcher]
 ```
 
 ## Data Flow
@@ -91,6 +94,10 @@ flowchart LR
     E --> E3[link ~/.cursor/skills to ~/.codex/skills]
 
     F --> F1[link ~/.claude to repo .claude]
+    F --> F2[merge settings.base.json into settings.json]
+    F --> F3[register MCP servers into ~/.claude.json user scope]
+    F --> F4[symlink versioned memory]
+    F --> F5[install claude-dev launcher]
 ```
 
 Input sources:
@@ -106,6 +113,10 @@ Generated or managed outputs:
 - `~/.cursor/agents` symlink
 - `~/.cursor/skills` symlink
 - `~/.claude` symlink
+- `~/.claude/settings.json` (merged from `.claude/settings.base.json`)
+- `~/.claude.json` `mcpServers` entries (user-scope, merged from `.codex/config.base.toml` + `.credentials.json`)
+- `~/.claude/projects/<encoded>/memory` symlink to versioned `.claude/memory/`
+- `claude-dev` launcher script (if Claude CLI available)
 - `.codex/agents/config/*.toml`
 - `.codex/config.local.toml` trust block for this repo
 - `.codex/config.toml`
@@ -188,6 +199,7 @@ flowchart LR
     Codex --> Agents[~/.agents/skills]
     Codex --> Cursor[~/.cursor/skills]
     Codex --> Claude[~/.claude/skills]
+    ClaudeMem[repo/.claude/memory] --> MemLink[~/.claude/projects/&lt;encoded&gt;/memory]
 ```
 
 Single-source rule for skills:
@@ -230,9 +242,32 @@ Managed Cursor paths:
 Claude onboarding:
 - creates `~/.claude` as a symlink to the tracked repo `.claude`
 - exposes `~/.claude/skills` through the tracked `.claude/skills` symlink, which points to `../.codex/skills`
+- merges `.claude/settings.base.json` into `settings.json` (preserves user overrides, adds missing base keys)
+- registers MCP servers from `.codex/config.base.toml` into `~/.claude.json` under `mcpServers` (user scope); merges credentials from `.credentials.json` at repo root if present
+- symlinks versioned memory: `~/.claude/projects/<encoded>/memory` -> `repo/.claude/memory`
+- installs `claude-dev` launcher with tmux integration (if the `claude` CLI is available)
 
-Managed Claude path:
+claude-dev launcher behavior:
+- Creates or attaches to a tmux session (`claude-work` by default), then runs `claude --dangerously-skip-permissions`
+- If already inside tmux: creates a dedicated `claude-work` session and switches to it (no nesting); if already in `claude-work`, execs Claude directly
+- If tmux is not installed: warns and falls back to direct exec
+- Override session name: `CLAUDE_DEV_TMUX_SESSION=my-session claude-dev`
+- Bypass tmux: `claude-dev --no-tmux`
+
+Base settings provide:
+- Default model: sonnet with medium reasoning effort
+- Agent teams: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` with auto teammate mode
+- Error-capture hook from self-improving-agent
+
+MCP servers (playwright, linear, context7) are sourced from `.codex/config.base.toml` and written into `~/.claude.json` under `mcpServers` as user-scoped servers (available across all projects). If `.credentials.json` exists at the repo root, access tokens are merged as `Authorization: Bearer` headers on matching servers.
+
+Managed Claude paths:
 - `~/.claude -> repo/.claude`
+- `~/.claude/CLAUDE.md` (user-scope agent instructions, tracked at `.claude/CLAUDE.md`)
+- `~/.claude/settings.json` (merged from base)
+- `~/.claude.json` `mcpServers` (user-scope MCP registration)
+- `~/.claude/projects/<encoded>/memory -> repo/.claude/memory`
+- `claude-dev` launcher in `$XDG_BIN_HOME` or `~/bin` (macOS) / `~/.local/bin` (Linux)
 
 ## Filesystem Effects and Safety Rules
 
