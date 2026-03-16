@@ -413,6 +413,232 @@ ensure_shared_onboarding_paths() {
   remove_agents_skills_library "$agents_skills_library_dir" "$timestamp"
 }
 
+resolve_claude_cli_path() {
+  local resolved_path npm_bin_dir
+  resolved_path="$(command -v claude 2>/dev/null || true)"
+  if [ -n "$resolved_path" ]; then
+    printf '%s\n' "$resolved_path"
+    return 0
+  fi
+
+  npm_bin_dir="$(resolve_npm_global_bin_dir 2>/dev/null || true)"
+  if [ -n "$npm_bin_dir" ] && [ -x "$npm_bin_dir/claude" ]; then
+    printf '%s\n' "$npm_bin_dir/claude"
+    return 0
+  fi
+
+  return 1
+}
+
+install_claude_dev_launcher() {
+  local claude_cli_path="$1"
+  local launcher_bin_dir claude_dev_launcher launcher_content
+
+  launcher_bin_dir="$(resolve_launcher_bin_dir)"
+  claude_dev_launcher="$launcher_bin_dir/claude-dev"
+  launcher_content="$(cat <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+default_claude_path="$claude_cli_path"
+resolved_claude_path="\$(command -v claude 2>/dev/null || true)"
+
+if [ -z "\$resolved_claude_path" ] && [ -x "\$default_claude_path" ]; then
+  resolved_claude_path="\$default_claude_path"
+fi
+
+if [ -z "\$resolved_claude_path" ]; then
+  printf 'claude-dev: unable to locate the Claude CLI. Rerun onboarding or install claude.\\n' >&2
+  exit 1
+fi
+
+# Parse launcher-specific flags; forward everything else to claude
+use_tmux=1
+claude_args=()
+while [ \$# -gt 0 ]; do
+  case "\$1" in
+    --no-tmux)
+      use_tmux=0
+      shift
+      ;;
+    *)
+      claude_args+=("\$1")
+      shift
+      ;;
+  esac
+done
+
+# User opted out: exec directly
+if [ "\$use_tmux" = "0" ]; then
+  exec "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+fi
+
+# tmux not available: warn and fall back
+if ! command -v tmux >/dev/null 2>&1; then
+  printf 'claude-dev: tmux not found; agent teams will use in-process mode\\n' >&2
+  exec "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+fi
+
+session_name="\${CLAUDE_DEV_TMUX_SESSION:-claude-work}"
+
+# Already inside tmux: create dedicated session and switch to it
+if [ -n "\${TMUX:-}" ]; then
+  current_session="\$(tmux display-message -p '#S')"
+  if [ "\$current_session" = "\$session_name" ]; then
+    exec "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+  fi
+  if ! tmux has-session -t "\$session_name" 2>/dev/null; then
+    tmux new-session -d -s "\$session_name" \\
+      "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+  fi
+  exec tmux switch-client -t "\$session_name"
+fi
+
+# Not in tmux: create/attach session
+exec tmux new-session -A -s "\$session_name" \\
+  "\$resolved_claude_path" --dangerously-skip-permissions "\${claude_args[@]+"\${claude_args[@]}"}"
+EOF
+)"
+
+  mkdir -p "$launcher_bin_dir"
+  write_executable_file_atomic "$claude_dev_launcher" "$launcher_content"
+  log "Installed Claude permission-skipping launcher: $claude_dev_launcher"
+
+  if ! path_contains_dir "$launcher_bin_dir"; then
+    log "Launcher directory is not on PATH. Add this to your shell profile:"
+    log "  export PATH=\"$launcher_bin_dir:\$PATH\""
+  fi
+}
+
+ensure_claude_settings() {
+  local settings_base="$1"
+  local settings_target="$2"
+
+  if [ ! -f "$settings_base" ]; then
+    log "Claude settings base not found: $settings_base; skipping settings merge"
+    return 0
+  fi
+
+  if [ ! -f "$settings_target" ]; then
+    log "Creating Claude settings from base: $settings_target"
+    cp "$settings_base" "$settings_target"
+    return 0
+  fi
+
+  log "Merging Claude base settings into: $settings_target"
+  python3 -c "
+import json, sys
+base = json.load(open(sys.argv[1]))
+target = json.load(open(sys.argv[2]))
+for k, v in base.items():
+    if k not in target:
+        target[k] = v
+    elif isinstance(v, dict) and isinstance(target[k], dict):
+        for sk, sv in v.items():
+            if sk not in target[k]:
+                target[k][sk] = sv
+with open(sys.argv[2], 'w') as f:
+    json.dump(target, f, indent=2)
+    f.write('\n')
+" "$settings_base" "$settings_target"
+}
+
+ensure_user_mcp_servers() {
+  local config_base_toml="$1"
+  local claude_json_target="$2"
+  local credentials_path="${3:-}"
+
+  if [ ! -f "$config_base_toml" ]; then
+    log "Codex base config not found: $config_base_toml; skipping MCP server registration"
+    return 0
+  fi
+
+  if [ -n "$credentials_path" ] && [ -f "$credentials_path" ]; then
+    log "Registering MCP servers into: $claude_json_target (with credentials from: $credentials_path)"
+  else
+    log "Registering MCP servers into: $claude_json_target"
+    credentials_path=""
+  fi
+
+  python3 -c "
+import json, re, sys, os
+
+toml_path = sys.argv[1]
+out_path = sys.argv[2]
+creds_path = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else None
+
+with open(toml_path) as f:
+    text = f.read()
+
+creds = {}
+if creds_path:
+    try:
+        with open(creds_path) as f:
+            raw_creds = json.load(f)
+        for key, val in raw_creds.items():
+            server_name = key.split('|')[0]
+            creds[server_name] = val
+    except Exception:
+        pass
+
+servers = {}
+for m in re.finditer(r'^\[mcp_servers\.(\S+)\]\s*\n((?:(?!\n\[).)*)', text, re.MULTILINE | re.DOTALL):
+    name = m.group(1)
+    block = m.group(2)
+    server = {}
+    for line in block.strip().splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        key, _, val = line.partition('=')
+        key = key.strip()
+        val = val.strip()
+        if key in ('startup_timeout_sec',):
+            continue
+        if val.startswith('\"'):
+            server[key] = val.strip('\"')
+        elif val.startswith('['):
+            server[key] = json.loads(val)
+    if 'url' in server and 'command' not in server:
+        server.setdefault('type', 'http')
+    if server:
+        servers[name] = server
+
+claude_json = {}
+if os.path.exists(out_path):
+    try:
+        with open(out_path) as f:
+            claude_json = json.load(f)
+    except Exception:
+        pass
+
+claude_json.setdefault('mcpServers', {}).update(servers)
+
+with open(out_path, 'w') as f:
+    json.dump(claude_json, f, indent=2)
+    f.write('\n')
+" "$config_base_toml" "$claude_json_target" "${credentials_path:-}"
+}
+
+ensure_claude_memory_symlink() {
+  local repo_root="$1"
+  local claude_home="$2"
+  local claude_repo_home="$3"
+  local timestamp="$4"
+  local encoded_path target_dir source_dir
+
+  encoded_path="$(printf '%s' "$repo_root" | tr '/' '-')"
+  target_dir="${claude_home}/projects/${encoded_path}/memory"
+  source_dir="${claude_repo_home}/memory"
+
+  if [ ! -d "$source_dir" ]; then
+    log "Claude versioned memory directory not found: $source_dir; skipping memory symlink"
+    return 0
+  fi
+
+  ensure_path_symlink "$target_dir" "$source_dir" "Claude versioned memory" "$timestamp"
+}
+
 require_onboarding_env() {
   local missing_var
   for missing_var in "$@"; do

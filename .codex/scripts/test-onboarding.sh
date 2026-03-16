@@ -415,6 +415,43 @@ test_conflicting_bootstrap_flags_fail() {
   assert_file_contains "$output_file" 'Cannot combine --with-codex-bootstrap and --without-codex-bootstrap'
 }
 
+create_fake_claude() {
+  local bin_dir="$1"
+  cat > "${bin_dir}/claude" <<'EOF'
+#!/usr/bin/env bash
+printf 'fake-claude %s\n' "$*" >/dev/null
+EOF
+  chmod +x "${bin_dir}/claude"
+}
+
+test_claude_dev_launcher_includes_tmux_integration() {
+  local fixture_repo="$fixtures_root/repo-tmux"
+  local fixture_home="$fixtures_root/home-tmux"
+  local bin_dir="$fixtures_root/bin-tmux"
+  local xdg_bin="$fixtures_root/xdg-tmux"
+  mkdir -p "$fixture_home" "$bin_dir" "$xdg_bin"
+  prepare_fixture_repo "$fixture_repo"
+  create_fake_codex "$bin_dir"
+  create_fake_claude "$bin_dir"
+
+  cat > "$fixture_repo/.claude/settings.base.json" <<'EOF'
+{ "model": "sonnet" }
+EOF
+
+  PATH_OVERRIDE="$bin_dir" run_onboarding "$fixture_repo" "$fixture_home" "$xdg_bin" --agent claude --skip-gh-auth
+
+  [ -x "$xdg_bin/claude-dev" ] || fail "Expected claude-dev launcher at $xdg_bin/claude-dev"
+  assert_file_contains "$xdg_bin/claude-dev" 'tmux new-session'
+  assert_file_contains "$xdg_bin/claude-dev" 'tmux has-session'
+  assert_file_contains "$xdg_bin/claude-dev" 'tmux switch-client'
+  assert_file_contains "$xdg_bin/claude-dev" 'tmux display-message'
+  assert_file_contains "$xdg_bin/claude-dev" 'TMUX'
+  assert_file_contains "$xdg_bin/claude-dev" '--no-tmux'
+  assert_file_contains "$xdg_bin/claude-dev" 'claude-work'
+  assert_file_contains "$xdg_bin/claude-dev" '--dangerously-skip-permissions'
+  assert_file_contains "$xdg_bin/claude-dev" 'CLAUDE_DEV_TMUX_SESSION'
+}
+
 test_idempotent_rerun_keeps_config_stable() {
   local fixture_repo="$fixtures_root/repo-idempotent"
   local fixture_home="$fixtures_root/home-idempotent"
@@ -458,5 +495,7 @@ test_direct_codex_script_is_blocked
 printf 'ok - direct codex onboarding entry is blocked\n'
 test_conflicting_bootstrap_flags_fail
 printf 'ok - conflicting bootstrap flags fail cleanly\n'
+test_claude_dev_launcher_includes_tmux_integration
+printf 'ok - claude-dev launcher includes tmux integration\n'
 test_idempotent_rerun_keeps_config_stable
 printf 'ok - onboarding rerun is idempotent\n'
