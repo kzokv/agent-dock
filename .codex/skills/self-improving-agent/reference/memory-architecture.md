@@ -29,11 +29,11 @@ A complete reference for how Claude Code's memory systems work together.
 
 **Purpose:** Notes Claude writes to itself about project patterns and learnings.
 
-**Location:** `~/.claude/projects/<project-path>/memory/`
+**Location:** `.claude/memory/` (project-level, version-controlled)
 
 **Structure:**
 ```
-~/.claude/projects/<project-path>/memory/
+<repo-root>/.claude/memory/
 ├── MEMORY.md           # Main file (first 200 lines loaded)
 ├── debugging.md        # Topic file (loaded on demand)
 ├── patterns.md         # Topic file (loaded on demand)
@@ -46,7 +46,7 @@ A complete reference for how Claude Code's memory systems work together.
 - Claude creates topic files automatically when MEMORY.md gets long
 - Git repo root determines the project path
 - Git worktrees get separate memory directories
-- Local only — not shared via git
+- Version-controlled — shared via git
 - Toggle with `/memory`, settings, or `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`
 - Subagents can have their own auto memory
 

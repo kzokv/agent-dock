@@ -134,4 +134,4 @@ paths:
 2. **Use subdirectories for large projects** — `rules/frontend/`, `rules/backend/`
 3. **Keep unscoped rules minimal** — they load every session like CLAUDE.md
 4. **Review after refactors** — paths may change when directories are reorganized
-5. **Share via git** — rules/ should be version-controlled (unlike auto-memory)
+5. **Share via git** — rules/ should be version-controlled (auto-memory is also version-controlled in .claude/memory/)

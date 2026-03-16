@@ -23,17 +23,13 @@ Performs a comprehensive audit of Claude Code's auto-memory and produces actiona
 
 ```bash
 # Find the project's auto-memory directory
-MEMORY_DIR="$HOME/.claude/projects/$(pwd | sed 's|/|%2F|g; s|%2F|/|; s|^/||')/memory"
-
-# Fallback: check common path patterns
-# ~/.claude/projects/<user>/<project>/memory/
-# ~/.claude/projects/<absolute-path>/memory/
+MEMORY_DIR="$(git rev-parse --show-toplevel)/.claude/memory"
 
 # List all memory files
 ls -la "$MEMORY_DIR"/
 ```
 
-If memory directory doesn't exist, report that auto-memory may be disabled. Suggest checking with `/memory`.
+If memory directory doesn't exist, report that `.claude/memory/` has not been created yet. Suggest creating it or checking with `/memory`.
 
 ### Step 2: Read and analyze MEMORY.md
 
