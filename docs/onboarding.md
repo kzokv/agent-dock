@@ -68,6 +68,7 @@ flowchart TD
     A --> CSET[settings merge]
     A --> CMEM[memory symlink]
     A --> CDEV[claude-dev launcher]
+    A --> CNET[codex-net launcher]
 ```
 
 ## Data Flow
@@ -98,6 +99,7 @@ flowchart LR
     F --> F3[register MCP servers into ~/.claude.json user scope]
     F --> F4[symlink versioned memory]
     F --> F5[install claude-dev launcher]
+    F --> F6[install codex-net launcher]
 ```
 
 Input sources:
@@ -117,10 +119,10 @@ Generated or managed outputs:
 - `~/.claude.json` `mcpServers` entries (user-scope, merged from `.codex/config.base.toml` + `.credentials.json`)
 - `~/.claude/projects/<encoded>/memory` symlink to versioned `.claude/memory/`
 - `claude-dev` launcher script (if Claude CLI available)
+- `codex-net` launcher script (if Codex CLI available; installed by both Codex bootstrap and Claude onboarding)
 - `.codex/agents/config/*.toml`
 - `.codex/config.local.toml` trust block for this repo
 - `.codex/config.toml`
-- `codex-net` launcher script
 
 ## Execution Flow
 
@@ -213,7 +215,7 @@ When enabled, the internal Codex script:
 - upserts a trusted project block into `.codex/config.local.toml`
 - generates `.codex/config.toml` by concatenating `.codex/config.base.toml` with `.codex/config.local.toml`
 - ensures the `codex` CLI exists, installing it with `npm install -g @openai/codex` if needed
-- installs the `codex-net` launcher into `$XDG_BIN_HOME` when set, otherwise `~/bin` on macOS or `~/.local/bin` on other platforms
+- installs the `codex-net` launcher (see Launcher install directory below)
 
 Generated config model:
 - tracked shared defaults: `.codex/config.base.toml`
@@ -245,14 +247,68 @@ Claude onboarding:
 - merges `.claude/settings.base.json` into `settings.json` (preserves user overrides, adds missing base keys)
 - registers MCP servers from `.codex/config.base.toml` into `~/.claude.json` under `mcpServers` (user scope); merges credentials from `.credentials.json` at repo root if present
 - symlinks versioned memory: `~/.claude/projects/<encoded>/memory` -> `repo/.claude/memory`
-- installs `claude-dev` launcher with tmux integration (if the `claude` CLI is available)
+- installs `claude-dev` launcher with tmux and worktree integration (if the `claude` CLI is available)
+- installs `codex-net` launcher with the same feature set (if the `codex` CLI is available)
 
-claude-dev launcher behavior:
-- Creates or attaches to a tmux session (`claude-work` by default), then runs `claude --dangerously-skip-permissions`
-- If already inside tmux: creates a dedicated `claude-work` session and switches to it (no nesting); if already in `claude-work`, execs Claude directly
-- If tmux is not installed: warns and falls back to direct exec
-- Override session name: `CLAUDE_DEV_TMUX_SESSION=my-session claude-dev`
-- Bypass tmux: `claude-dev --no-tmux`
+Both launchers share identical behavior (see Launcher behavior below). Claude onboarding installs both so the agent launchers are available regardless of whether Codex bootstrap was run.
+
+### Launcher behavior
+
+`claude-dev` and `codex-net` share the same interactive scaffold:
+
+- Prompts for tmux session use and session name (skipped if args are passed or stdin is not a tty)
+- Prompts for worktree selection from `.worktrees/` at the project root, or offers to create a new one
+- Worktrees are created at `<git-root>/.worktrees/<name>` by default; custom absolute paths are supported
+- Runs a post-create hook if a new worktree was just created (see Post-create hook below)
+- Creates or attaches to a tmux session, then execs the CLI
+
+Launcher flags (same for both):
+
+| Flag | Env var | Default | Description |
+|---|---|---|---|
+| `--no-tmux` | `CLAUDE_DEV_NO_TMUX=1` / `CODEX_NET_NO_TMUX=1` | off | Skip tmux session management |
+| `--worktree PATH` | `CLAUDE_DEV_WORKTREE` / `CODEX_NET_WORKTREE` | (prompt) | Use or create worktree at PATH |
+| `--session NAME` | `CLAUDE_DEV_TMUX_SESSION` / `CODEX_NET_TMUX_SESSION` | `claude-work` / `codex-work` | Tmux session name |
+| `--` | — | — | Forward remaining args to the CLI |
+
+tmux session management:
+
+| Scenario | Behavior |
+|---|---|
+| Not in tmux | `tmux new-session -A -s <session>` |
+| In tmux, different session | Create session detached, then `switch-client` to it |
+| In tmux, already in target session | Exec CLI directly |
+| tmux not installed | Warn and exec directly |
+
+### Post-create hook
+
+When a new worktree is created, both launchers look for and run:
+
+```
+<project-root>/.hooks/post-worktree-create.sh
+```
+
+The hook runs in the context of the new worktree directory with these env vars set:
+
+| Variable | Value |
+|---|---|
+| `WORKTREE_PATH` | Absolute path to the new worktree |
+| `MAIN_ROOT` | Absolute path to the main repo checkout |
+
+The hook is optional — launchers silently skip it if the file does not exist. It only fires for **newly created** worktrees; selecting an existing worktree does not trigger the hook.
+
+Existing worktrees (selected from the picker) are never re-initialized.
+
+### Launcher install directory
+
+Both launchers are installed by `resolve_launcher_bin_dir()` in `scripts/onboarding-lib.sh`:
+
+1. `$XDG_BIN_HOME` if set
+2. `~/.local/bin` if already in `$PATH`
+3. `~/bin` if already in `$PATH`
+4. `~/.local/bin` (created, with a PATH warning) — default fallback on all platforms
+
+The function never writes to package-manager directories (`/opt/homebrew/bin`, `/usr/local/bin`).
 
 Base settings provide:
 - Default model: sonnet with medium reasoning effort
@@ -267,7 +323,8 @@ Managed Claude paths:
 - `~/.claude/settings.json` (merged from base)
 - `~/.claude.json` `mcpServers` (user-scope MCP registration)
 - `~/.claude/projects/<encoded>/memory -> repo/.claude/memory`
-- `claude-dev` launcher in `$XDG_BIN_HOME` or `~/bin` (macOS) / `~/.local/bin` (Linux)
+- `claude-dev` launcher in the resolved launcher bin dir (see Launcher install directory)
+- `codex-net` launcher in the resolved launcher bin dir (see Launcher install directory)
 
 ## Filesystem Effects and Safety Rules
 

@@ -32,3 +32,12 @@ else
   log "Claude CLI ('claude') not found; skipping claude-dev launcher."
   log "Install with: npm install -g @anthropic-ai/claude-code"
 fi
+
+# Install codex-net launcher if Codex CLI available
+codex_cli_path="$(resolve_codex_cli_path 2>/dev/null || true)"
+if [ -n "$codex_cli_path" ]; then
+  install_codex_net_launcher "$codex_cli_path"
+else
+  log "Codex CLI ('codex') not found; skipping codex-net launcher."
+  log "Install with: npm install -g @openai/codex"
+fi

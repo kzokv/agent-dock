@@ -12,6 +12,7 @@ vendor_imports/
 shell_snapshots/
 
 # Runtime state and caches
+.worktrees/
 history.jsonl
 models_cache.json
 version.json
