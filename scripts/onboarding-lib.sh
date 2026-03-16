@@ -67,27 +67,22 @@ resolve_launcher_bin_dir() {
   local platform
   platform="$(uname -s 2>/dev/null || printf 'unknown')"
 
-  if [ "$platform" = "Darwin" ]; then
-    local candidate
-    for candidate in "$HOME/bin" "$HOME/.local/bin"; do
-      if path_contains_dir "$candidate"; then
-        printf '%s\n' "$candidate"
-        return 0
-      fi
-    done
+  # Prefer user-local directories that are already in PATH
+  local candidate
+  for candidate in "$HOME/.local/bin" "$HOME/bin"; do
+    if path_contains_dir "$candidate"; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
 
-    for candidate in /opt/homebrew/bin /usr/local/bin; do
-      if path_contains_dir "$candidate" && [ -d "$candidate" ] && [ -w "$candidate" ]; then
-        printf '%s\n' "$candidate"
-        return 0
-      fi
-    done
-
-    printf '%s\n' "$HOME/bin"
-    return 0
+  # Default to ~/.local/bin (create + warn if not in PATH)
+  local default_dir="$HOME/.local/bin"
+  mkdir -p "$default_dir"
+  if ! path_contains_dir "$default_dir"; then
+    log "WARNING: $default_dir is not in PATH. Add it to your shell profile."
   fi
-
-  printf '%s\n' "$HOME/.local/bin"
+  printf '%s\n' "$default_dir"
 }
 
 resolve_npm_global_bin_dir() {
@@ -314,30 +309,233 @@ ensure_codex_cli() {
   printf '%s\n' "$codex_cli_path"
 }
 
+# Emit the shared flag-parsing / interactive-prompt / worktree-picker scaffold
+# used by both claude-dev and codex-net launchers.
+# Args: cli_name env_prefix default_session cli_args_var cli_display_name
+_generate_launcher_body() {
+  local cli_name="$1"
+  local env_prefix="$2"
+  local default_session="$3"
+  local cli_args_var="$4"
+  local cli_display_name="$5"
+  cat <<GENEOF
+
+SCRIPT_PATH="\${0##*/}"
+
+print_help() {
+  cat <<EOF
+Description:
+  Interactive launcher for ${cli_display_name} with tmux session management and
+  git worktree selection.
+
+Usage: \${SCRIPT_PATH} [OPTIONS] [-- ARGS...]
+
+Options:
+  -h, --help              Show this help message and exit (optional)
+  --no-tmux               Skip tmux session management (optional, default: off)
+  --worktree PATH         Use or create a worktree at PATH (optional)
+  --session NAME          Tmux session name (optional, default: ${default_session})
+  --                      Forward remaining arguments to ${cli_display_name}
+
+Environment:
+  ${env_prefix}_NO_TMUX=1    Equivalent to --no-tmux
+  ${env_prefix}_WORKTREE     Equivalent to --worktree
+  ${env_prefix}_TMUX_SESSION Equivalent to --session
+EOF
+}
+
+# ── Section 2: Parse launcher flags ───────────────────────────────────
+use_tmux=1
+worktree_path="\${${env_prefix}_WORKTREE:-}"
+session_name="\${${env_prefix}_TMUX_SESSION:-${default_session}}"
+${cli_args_var}=()
+[[ "\${${env_prefix}_NO_TMUX:-0}" = "1" ]] && use_tmux=0
+
+while [[ \$# -gt 0 ]]; do
+  case "\$1" in
+    -h|--help)   print_help; exit 0 ;;
+    --no-tmux)   use_tmux=0; shift ;;
+    --worktree)  worktree_path="\${2:?${cli_name}: --worktree requires a path}"; shift 2 ;;
+    --session)   session_name="\${2:?${cli_name}: --session requires a name}"; shift 2 ;;
+    --)          shift; ${cli_args_var}+=("\$@"); break ;;
+    *)           ${cli_args_var}+=("\$1"); shift ;;
+  esac
+done
+
+# Helper: true when we should show interactive prompts
+_interactive() {
+  [[ -t 0 && \${#${cli_args_var}[@]} -eq 0 ]]
+}
+
+# Resolve worktree base directory (.worktrees/ relative to repo root)
+worktree_base=""
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+  worktree_base="\$(git rev-parse --show-toplevel)/.worktrees"
+fi
+
+# Resolve relative --worktree values against the worktree base
+if [[ -n "\$worktree_path" && "\$worktree_path" != /* && -n "\$worktree_base" ]]; then
+  worktree_path="\$worktree_base/\$worktree_path"
+fi
+
+_worktree_created=0
+
+# Create worktree if it does not exist yet (auto-create from HEAD)
+_ensure_worktree() {
+  local wt_dir="\$1"
+  if [[ -d "\$wt_dir" ]]; then
+    _worktree_created=0
+    return 0
+  fi
+  _worktree_created=1
+  local branch_name
+  branch_name="\$(basename "\$wt_dir")"
+  mkdir -p "\$(dirname "\$wt_dir")"
+  if git show-ref --verify "refs/heads/\$branch_name" &>/dev/null; then
+    git worktree add "\$wt_dir" "\$branch_name"
+  else
+    git worktree add -b "\$branch_name" "\$wt_dir" HEAD
+  fi
+}
+
+# ── Section 3: Interactive tmux prompt ────────────────────────────────
+if [[ "\$use_tmux" = "1" ]] && _interactive && [[ -z "\$worktree_path" ]]; then
+  read -r -p "Use tmux session? [Y/n] " tmux_ans
+  [[ "\$tmux_ans" =~ ^[Nn] ]] && use_tmux=0
+  if [[ "\$use_tmux" = "1" ]]; then
+    read -r -p "Session name (default: \$session_name): " sn_ans
+    [[ -n "\$sn_ans" ]] && session_name="\$sn_ans"
+  fi
+fi
+
+# ── Section 4: Interactive worktree picker ────────────────────────────
+# Shows worktrees under .worktrees/ and offers to create new ones
+if [[ -z "\$worktree_path" && -n "\$worktree_base" ]] && _interactive; then
+  wt_paths=()
+  wt_branches=()
+  wt_base_resolved="\$(mkdir -p "\$worktree_base" && cd "\$worktree_base" && pwd -P)"
+  while IFS=\$'\\t' read -r wt_p wt_b; do
+    resolved_wt="\$(cd "\$wt_p" 2>/dev/null && pwd -P)" || continue
+    # Only include worktrees that live under .worktrees/
+    [[ "\$resolved_wt" = "\$wt_base_resolved"/* ]] || continue
+    wt_paths+=("\$wt_p")
+    wt_branches+=("\${wt_b##refs/heads/}")
+  done < <(
+    git worktree list --porcelain | awk '
+      /^worktree / { wt = substr(\$0, 10) }
+      /^branch /   { br = substr(\$0, 8); print wt "\t" br }
+    '
+  )
+
+  echo "Launch in a worktree?"
+  echo "  1) current directory (normal)"
+  for i in "\${!wt_paths[@]}"; do
+    wt_resolved="\$(cd "\${wt_paths[\$i]}" 2>/dev/null && pwd -P)"
+    wt_short="\${wt_resolved#"\$wt_base_resolved"/}"
+    printf "  %d) %s  [%s]\n" "\$((i + 2))" "\$wt_short" "\${wt_branches[\$i]}"
+  done
+  new_opt=\$(( \${#wt_paths[@]} + 2 ))
+  custom_opt=\$(( new_opt + 1 ))
+  printf "  %d) create new worktree\n" "\$new_opt"
+  printf "  %d) create new worktree (custom path)\n" "\$custom_opt"
+  read -r -p "Pick [1]: " pick
+  pick="\${pick:-1}"
+  if [[ "\$pick" =~ ^[0-9]+\$ ]]; then
+    if [[ "\$pick" -ge 2 && "\$pick" -le \$(( \${#wt_paths[@]} + 1 )) ]]; then
+      worktree_path="\${wt_paths[\$(( pick - 2 ))]}"
+    elif [[ "\$pick" -eq "\$new_opt" ]]; then
+      read -r -p "Worktree name (becomes branch name): " wt_name
+      [[ -n "\$wt_name" ]] && worktree_path="\$worktree_base/\$wt_name"
+    elif [[ "\$pick" -eq "\$custom_opt" ]]; then
+      read -r -p "Worktree name (becomes branch name): " wt_name
+      if [[ -n "\$wt_name" ]]; then
+        while true; do
+          read -r -p "Absolute path: " custom_path
+          [[ "\$custom_path" == /* ]] && break
+          echo "Path must be absolute (start with /)"
+        done
+        worktree_path="\$custom_path"
+      fi
+    fi
+  fi
+fi
+# ── Section 5: Worktree setup and post-create hook ────────────────────
+if [[ -n "\$worktree_path" ]]; then
+  _ensure_worktree "\$worktree_path"
+  cd "\$worktree_path" || { printf '${cli_name}: cannot cd to worktree %s\n' "\$worktree_path" >&2; exit 1; }
+
+  # Run post-create hook if worktree was just created
+  # Hook lives at .hooks/ in the project repo
+  # Both claude-dev and codex-net trigger the same hook for consistency.
+  if [[ "\$_worktree_created" = "1" ]]; then
+    main_root="\$(git worktree list --porcelain | head -1 | sed 's/^worktree //')"
+    hook_file="\${main_root}/.hooks/post-worktree-create.sh"
+    if [[ -f "\$hook_file" ]]; then
+      printf '${cli_name}: running post-create hook…\n'
+      export WORKTREE_PATH="\$worktree_path"
+      export MAIN_ROOT="\$main_root"
+      bash "\$hook_file"
+    fi
+  fi
+fi
+GENEOF
+}
+
 install_codex_net_launcher() {
   local codex_cli_path="$1"
   local launcher_bin_dir codex_net_launcher launcher_content
 
   launcher_bin_dir="$(resolve_launcher_bin_dir)"
   codex_net_launcher="$launcher_bin_dir/codex-net"
-  launcher_content="$(cat <<EOF
+  launcher_content="$(cat <<'LAUNCHER_EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-default_codex_path="$codex_cli_path"
-resolved_codex_path="\$(command -v codex 2>/dev/null || true)"
 
-if [ -z "\$resolved_codex_path" ] && [ -x "\$default_codex_path" ]; then
-  resolved_codex_path="\$default_codex_path"
-fi
-
-if [ -z "\$resolved_codex_path" ]; then
-  printf 'codex-net: unable to locate the Codex CLI. Rerun onboarding or install codex.\\n' >&2
+# ── Section 1: Locate Codex CLI ───────────────────────────────────────
+LAUNCHER_EOF
+)"
+  # Inject the literal codex_cli_path (expanded at install time)
+  launcher_content+="
+default_codex_path=\"$codex_cli_path\""
+  launcher_content+='
+resolved_codex_path="$(command -v codex 2>/dev/null || true)"
+[[ -z "$resolved_codex_path" && -x "$default_codex_path" ]] && resolved_codex_path="$default_codex_path"
+if [[ -z "$resolved_codex_path" ]]; then
+  printf '\''codex-net: unable to locate the Codex CLI. Rerun onboarding or install codex.\n'\'' >&2
   exit 1
 fi
+'
+  # Sections 2-4: shared launcher body (flag parsing, tmux prompt, worktree picker)
+  launcher_content+="$(_generate_launcher_body "codex-net" "CODEX_NET" "codex-work" "codex_args" "Codex CLI")"
 
-exec "\$resolved_codex_path" --sandbox danger-full-access -a never --search -c shell_environment_policy.inherit=all "\$@"
-EOF
-)"
+  # Section 6: codex-specific exec (tmux + CLI invocation)
+  launcher_content+='
+if [[ "$use_tmux" = "0" ]] || ! command -v tmux >/dev/null 2>&1; then
+  [[ "$use_tmux" = "1" ]] && printf '\''codex-net: tmux not found; launching directly\n'\'' >&2
+  exec "$resolved_codex_path" --sandbox danger-full-access -a never --search \
+    -c shell_environment_policy.inherit=all "${codex_args[@]+"${codex_args[@]}"}"
+fi
+
+# Already inside tmux: create dedicated session and switch to it
+if [[ -n "${TMUX:-}" ]]; then
+  current_session="$(tmux display-message -p '\''#S'\'')"
+  if [[ "$current_session" = "$session_name" ]]; then
+    exec "$resolved_codex_path" --sandbox danger-full-access -a never --search \
+      -c shell_environment_policy.inherit=all "${codex_args[@]+"${codex_args[@]}"}"
+  fi
+  if ! tmux has-session -t "$session_name" 2>/dev/null; then
+    tmux new-session -d -s "$session_name" \
+      "$resolved_codex_path" --sandbox danger-full-access -a never --search \
+      -c shell_environment_policy.inherit=all "${codex_args[@]+"${codex_args[@]}"}"
+  fi
+  exec tmux switch-client -t "$session_name"
+fi
+
+# Not in tmux: create/attach session
+exec tmux new-session -A -s "$session_name" \
+  "$resolved_codex_path" --sandbox danger-full-access -a never --search \
+  -c shell_environment_policy.inherit=all "${codex_args[@]+"${codex_args[@]}"}"
+'
 
   mkdir -p "$launcher_bin_dir"
   write_executable_file_atomic "$codex_net_launcher" "$launcher_content"
@@ -453,122 +651,12 @@ if [[ -z "$resolved_claude_path" ]]; then
   printf '\''claude-dev: unable to locate the Claude CLI. Rerun onboarding or install claude.\n'\'' >&2
   exit 1
 fi
+'
+  # Sections 2-4: shared launcher body (flag parsing, tmux prompt, worktree picker)
+  launcher_content+="$(_generate_launcher_body "claude-dev" "CLAUDE_DEV" "claude-work" "claude_args" "Claude Code")"
 
-# ── Section 2: Parse launcher flags ───────────────────────────────────
-use_tmux=1
-worktree_path="${CLAUDE_DEV_WORKTREE:-}"
-session_name="${CLAUDE_DEV_TMUX_SESSION:-claude-work}"
-claude_args=()
-[[ "${CLAUDE_DEV_NO_TMUX:-0}" = "1" ]] && use_tmux=0
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --no-tmux)   use_tmux=0; shift ;;
-    --worktree)  worktree_path="${2:?claude-dev: --worktree requires a path}"; shift 2 ;;
-    --session)   session_name="${2:?claude-dev: --session requires a name}"; shift 2 ;;
-    --)          shift; claude_args+=("$@"); break ;;
-    *)           claude_args+=("$1"); shift ;;
-  esac
-done
-
-# Helper: true when we should show interactive prompts
-_interactive() {
-  [[ -t 0 && ${#claude_args[@]} -eq 0 ]]
-}
-
-# Resolve worktree base directory (.claude/worktrees/ relative to repo root)
-worktree_base=""
-if git rev-parse --is-inside-work-tree &>/dev/null; then
-  worktree_base="$(git rev-parse --show-toplevel)/.claude/worktrees"
-fi
-
-# Resolve relative --worktree values against the worktree base
-if [[ -n "$worktree_path" && "$worktree_path" != /* && -n "$worktree_base" ]]; then
-  worktree_path="$worktree_base/$worktree_path"
-fi
-
-# Create worktree if it does not exist yet (auto-create from HEAD)
-_ensure_worktree() {
-  local wt_dir="$1"
-  [[ -d "$wt_dir" ]] && return 0
-  local branch_name
-  branch_name="$(basename "$wt_dir")"
-  mkdir -p "$(dirname "$wt_dir")"
-  if git show-ref --verify "refs/heads/$branch_name" &>/dev/null; then
-    git worktree add "$wt_dir" "$branch_name"
-  else
-    git worktree add -b "$branch_name" "$wt_dir" HEAD
-  fi
-}
-
-# ── Section 3: Interactive tmux prompt ────────────────────────────────
-if [[ "$use_tmux" = "1" ]] && _interactive && [[ -z "$worktree_path" ]]; then
-  read -r -p "Use tmux session? [Y/n] " tmux_ans
-  [[ "$tmux_ans" =~ ^[Nn] ]] && use_tmux=0
-  if [[ "$use_tmux" = "1" ]]; then
-    read -r -p "Session name (default: $session_name): " sn_ans
-    [[ -n "$sn_ans" ]] && session_name="$sn_ans"
-  fi
-fi
-
-# ── Section 4: Interactive worktree picker ────────────────────────────
-# Shows worktrees under .claude/worktrees/ and offers to create new ones
-if [[ -z "$worktree_path" && -n "$worktree_base" ]] && _interactive; then
-  wt_paths=()
-  wt_branches=()
-  wt_base_resolved="$(mkdir -p "$worktree_base" && cd "$worktree_base" && pwd -P)"
-  while IFS=$'\''\t'\'' read -r wt_p wt_b; do
-    resolved_wt="$(cd "$wt_p" 2>/dev/null && pwd -P)" || continue
-    # Only include worktrees that live under .claude/worktrees/
-    [[ "$resolved_wt" = "$wt_base_resolved"/* ]] || continue
-    wt_paths+=("$wt_p")
-    wt_branches+=("${wt_b##refs/heads/}")
-  done < <(
-    git worktree list --porcelain | awk '\''
-      /^worktree / { wt = substr($0, 10) }
-      /^branch /   { br = substr($0, 8); print wt "\t" br }
-    '\''
-  )
-
-  echo "Launch in a worktree?"
-  echo "  1) current directory (normal)"
-  for i in "${!wt_paths[@]}"; do
-    wt_resolved="$(cd "${wt_paths[$i]}" 2>/dev/null && pwd -P)"
-    wt_short="${wt_resolved#"$wt_base_resolved"/}"
-    printf "  %d) %s  [%s]\n" "$((i + 2))" "$wt_short" "${wt_branches[$i]}"
-  done
-  new_opt=$(( ${#wt_paths[@]} + 2 ))
-  custom_opt=$(( new_opt + 1 ))
-  printf "  %d) create new worktree\n" "$new_opt"
-  printf "  %d) create new worktree (custom path)\n" "$custom_opt"
-  read -r -p "Pick [1]: " pick
-  pick="${pick:-1}"
-  if [[ "$pick" =~ ^[0-9]+$ ]]; then
-    if [[ "$pick" -ge 2 && "$pick" -le $(( ${#wt_paths[@]} + 1 )) ]]; then
-      worktree_path="${wt_paths[$((pick - 2))]}"
-    elif [[ "$pick" -eq "$new_opt" ]]; then
-      read -r -p "Worktree name (becomes branch name): " wt_name
-      [[ -n "$wt_name" ]] && worktree_path="$worktree_base/$wt_name"
-    elif [[ "$pick" -eq "$custom_opt" ]]; then
-      read -r -p "Worktree name (becomes branch name): " wt_name
-      if [[ -n "$wt_name" ]]; then
-        while true; do
-          read -r -p "Absolute path: " custom_path
-          [[ "$custom_path" == /* ]] && break
-          echo "Path must be absolute (start with /)"
-        done
-        worktree_path="$custom_path"
-      fi
-    fi
-  fi
-fi
-
-# ── Section 5: Assemble args and exec ─────────────────────────────────
-if [[ -n "$worktree_path" ]]; then
-  _ensure_worktree "$worktree_path"
-  cd "$worktree_path" || { printf '\''claude-dev: cannot cd to worktree %s\n'\'' "$worktree_path" >&2; exit 1; }
-fi
-
+  # Section 6: claude-specific exec (tmux + CLI invocation)
+  launcher_content+='
 if [[ "$use_tmux" = "0" ]] || ! command -v tmux >/dev/null 2>&1; then
   [[ "$use_tmux" = "1" ]] && printf '\''claude-dev: tmux not found; launching directly\n'\'' >&2
   exec "$resolved_claude_path" --dangerously-skip-permissions "${claude_args[@]+"${claude_args[@]}"}"
