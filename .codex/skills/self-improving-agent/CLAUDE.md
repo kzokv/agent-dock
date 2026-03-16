@@ -14,9 +14,9 @@ Use the `/si:` namespace for all commands:
 
 ## How auto-memory works
 
-Claude Code maintains `~/.claude/projects/<project-path>/memory/MEMORY.md` automatically. The first 200 lines load into every session. When it grows too large, Claude moves details into topic files like `debugging.md` or `patterns.md`.
+Claude Code maintains `.claude/memory/MEMORY.md` (project-level, version-controlled) automatically. The first 200 lines load into every session. When it grows too large, Claude moves details into topic files like `debugging.md` or `patterns.md`.
 
-This plugin reads that directory — it never creates its own storage.
+This plugin reads and writes to `.claude/memory/` — it never creates its own storage.
 
 ## When to use each command
 

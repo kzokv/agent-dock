@@ -69,7 +69,7 @@ Space freed for new learnings
 ## Design Principles
 
 1. **Don't fight auto-memory — orchestrate it.** Auto-memory captures. This plugin curates.
-2. **No duplicate storage.** Reads from `~/.claude/projects/` directly. No `.learnings/` directory.
+2. **No duplicate storage.** Reads from `.claude/memory/` (project-level, version-controlled). No `.learnings/` directory.
 3. **Zero capture overhead.** Auto-memory handles capture. Hook only fires on errors.
 4. **Promotion = graduation.** Moving a pattern from MEMORY.md to CLAUDE.md changes its priority.
 5. **Respect the 200-line limit.** Actively manages MEMORY.md capacity.
