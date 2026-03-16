@@ -57,3 +57,18 @@ session_index.jsonl
 # Cache
 cache/**
 *.sqlite*
+
+# Claude Code runtime artifacts
+.claude/backups/
+.claude/cache/
+.claude/downloads/
+.claude/history.jsonl
+.claude/ide/
+.claude/projects/
+.claude/session-env/
+.claude/sessions/
+.claude/settings.json
+.claude/shell-snapshots/
+.claude/.credentials.json
+.claude/file-history/
+.claude/plugins/
