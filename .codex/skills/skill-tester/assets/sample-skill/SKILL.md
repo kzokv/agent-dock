@@ -1,4 +1,20 @@
+---
+Name: sample-text-processor
+Tier: BASIC
+Category: Text Processing
+Dependencies: None (Python Standard Library Only)
+Author: Claude Skills Engineering Team
+Version: 1.0.0
+description: >
+  A basic text processing skill that demonstrates BASIC tier requirements for
+  the claude-skills ecosystem.
+---
+
 # Sample Text Processor
+
+## Name
+
+sample-text-processor
 
 ---
 
