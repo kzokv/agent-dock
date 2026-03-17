@@ -107,6 +107,33 @@ tmux kill-session -t claude-work   # or codex-work
 claude-dev
 ```
 
+## tmux configuration
+
+The repo ships a version-controlled tmux config at `tmux/.tmux.conf`. Onboarding copies it to `~/.tmux.conf` automatically (backing up any differing existing file). It enables:
+
+- `mouse on` — scroll and pane selection via trackpad/mouse
+- `escape-time 10` — near-zero delay so `Ctrl+B` registers instantly (fixes the "nothing happens" symptom)
+- `default-terminal "tmux-256color"` + true-color override for iTerm2
+- TPM + catppuccin mocha theme + tmux-sensible
+
+**Reload after manual edits:**
+
+```bash
+tmux source-file ~/.tmux.conf
+```
+
+**Install new plugins** (inside a tmux session):
+
+```
+prefix + I   (Ctrl+B then Shift+I)
+```
+
+**Re-run onboarding** to re-sync config from the repo and reinstall plugins:
+
+```bash
+./scripts/onboarding.sh --agent claude --skip-gh-auth
+```
+
 ## Bypassing tmux
 
 ```bash

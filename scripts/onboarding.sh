@@ -182,6 +182,7 @@ export ONBOARDING_CONFIG_FILE="$config_file"
 export ONBOARDING_PROJECT_HEADER="$project_header"
 
 ensure_shared_onboarding_paths "$timestamp" "$codex_home" "$agents_home" "$agents_skills_dir" "$agents_skills_library_dir"
+ensure_tmux_config "$repo_root" "$timestamp"
 
 run_codex_bootstrap() {
   [ -x "$codex_agent_script" ] || die "Missing Codex onboarding script: $codex_agent_script"

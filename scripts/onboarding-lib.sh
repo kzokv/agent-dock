@@ -532,9 +532,12 @@ if [[ -n "${TMUX:-}" ]]; then
 fi
 
 # Not in tmux: create/attach session
-exec tmux new-session -A -s "$session_name" \
-  "$resolved_codex_path" --sandbox danger-full-access -a never --search \
-  -c shell_environment_policy.inherit=all "${codex_args[@]+"${codex_args[@]}"}"
+if ! tmux has-session -t "$session_name" 2>/dev/null; then
+  tmux new-session -d -s "$session_name" \
+    "$resolved_codex_path" --sandbox danger-full-access -a never --search \
+    -c shell_environment_policy.inherit=all "${codex_args[@]+"${codex_args[@]}"}";
+fi
+exec tmux attach-session -t "$session_name"
 '
 
   mkdir -p "$launcher_bin_dir"
@@ -595,6 +598,46 @@ generate_agent_role_configs() {
 
   log "Generating role config files in: $output_dir"
   python3 "$render_agent_configs_script" --output-dir "$output_dir" --default-model "gpt-5.4" --default-reasoning "medium"
+}
+
+ensure_tmux_config() {
+  local repo_root="$1"
+  local timestamp="$2"
+  local source_conf="${repo_root}/tmux/.tmux.conf"
+  local target_conf="$HOME/.tmux.conf"
+  local tpm_dir="$HOME/.tmux/plugins/tpm"
+
+  if [ ! -f "$source_conf" ]; then
+    log "tmux config source not found: $source_conf; skipping"
+    return 0
+  fi
+
+  # Copy config (backup if existing differs)
+  if [ -f "$target_conf" ]; then
+    if ! diff -q "$source_conf" "$target_conf" >/dev/null 2>&1; then
+      local backup="${target_conf}.backup.${timestamp}"
+      log "Backing up existing ~/.tmux.conf to: $backup"
+      cp "$target_conf" "$backup"
+    else
+      log "~/.tmux.conf already up to date"
+      return 0  # skip TPM check too if config unchanged
+    fi
+  fi
+
+  log "Installing tmux config: $target_conf"
+  cp "$source_conf" "$target_conf"
+
+  # Bootstrap TPM
+  if [ ! -d "$tpm_dir" ]; then
+    log "Cloning TPM..."
+    git clone https://github.com/tmux-plugins/tpm "$tpm_dir"
+  fi
+
+  # Install plugins
+  if [ -x "$tpm_dir/bin/install_plugins" ]; then
+    log "Installing tmux plugins..."
+    "$tpm_dir/bin/install_plugins"
+  fi
 }
 
 ensure_shared_onboarding_paths() {
@@ -676,8 +719,11 @@ if [[ -n "${TMUX:-}" ]]; then
 fi
 
 # Not in tmux: create/attach session
-exec tmux new-session -A -s "$session_name" \
-  "$resolved_claude_path" --dangerously-skip-permissions "${claude_args[@]+"${claude_args[@]}"}"
+if ! tmux has-session -t "$session_name" 2>/dev/null; then
+  tmux new-session -d -s "$session_name" \
+    "$resolved_claude_path" --dangerously-skip-permissions "${claude_args[@]+"${claude_args[@]}"}";
+fi
+exec tmux attach-session -t "$session_name"
 '
 
   mkdir -p "$launcher_bin_dir"
