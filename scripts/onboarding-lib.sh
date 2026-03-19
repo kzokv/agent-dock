@@ -392,6 +392,9 @@ _ensure_worktree() {
   branch_name="\$(basename "\$wt_dir")"
   mkdir -p "\$(dirname "\$wt_dir")"
   if git show-ref --verify "refs/heads/\$branch_name" &>/dev/null; then
+    # Branch exists (likely leftover from a removed worktree).
+    # Reset it to current HEAD so the worktree gets the latest code.
+    git branch -f "\$branch_name" HEAD
     git worktree add "\$wt_dir" "\$branch_name"
   else
     git worktree add -b "\$branch_name" "\$wt_dir" HEAD
