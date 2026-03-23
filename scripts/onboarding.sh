@@ -108,7 +108,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "$initial_arg_count" -eq 0 ] && { [ -t 0 ] || [ "${ONBOARDING_FORCE_INTERACTIVE:-0}" = "1" ]; }; then
-  printf 'codex-home onboarding\n'
+  printf 'agent-dock onboarding\n'
   printf 'Running interactive setup with defaults after agent selection.\n\n'
 fi
 

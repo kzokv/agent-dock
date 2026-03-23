@@ -1,6 +1,6 @@
 # Onboarding
 
-This document is the canonical source of truth for onboarding in `codex-home`.
+This document is the canonical source of truth for onboarding in `agent-dock`.
 
 Use it for:
 - what `./scripts/onboarding.sh` changes
@@ -37,17 +37,17 @@ Default behavior:
 - `--without-codex-bootstrap` is supported for `codex`, `cursor`, `claude`, and `all`.
 
 Internal-only entrypoint:
-- [`.codex/scripts/onboarding.sh`](/Users/lume/repos/codex-home/.codex/scripts/onboarding.sh) is the Codex bootstrap implementation used by the root orchestrator.
+- [`.codex/scripts/onboarding.sh`](/Users/lume/repos/agent-dock/.codex/scripts/onboarding.sh) is the Codex bootstrap implementation used by the root orchestrator.
 - Do not run it directly. It rejects operator use unless the root orchestrator passes its hidden internal flag.
 
 ## Ownership
 
 Script ownership:
-- Orchestrator: [`scripts/onboarding.sh`](/Users/lume/repos/codex-home/scripts/onboarding.sh)
-- Shared helpers: [`scripts/onboarding-lib.sh`](/Users/lume/repos/codex-home/scripts/onboarding-lib.sh)
-- Codex bootstrap implementation: [`.codex/scripts/onboarding.sh`](/Users/lume/repos/codex-home/.codex/scripts/onboarding.sh)
-- Cursor-specific wiring: [`.cursor/scripts/onboarding.sh`](/Users/lume/repos/codex-home/.cursor/scripts/onboarding.sh)
-- Claude-specific wiring: [`.claude/scripts/onboarding.sh`](/Users/lume/repos/codex-home/.claude/scripts/onboarding.sh)
+- Orchestrator: [`scripts/onboarding.sh`](/Users/lume/repos/agent-dock/scripts/onboarding.sh)
+- Shared helpers: [`scripts/onboarding-lib.sh`](/Users/lume/repos/agent-dock/scripts/onboarding-lib.sh)
+- Codex bootstrap implementation: [`.codex/scripts/onboarding.sh`](/Users/lume/repos/agent-dock/.codex/scripts/onboarding.sh)
+- Cursor-specific wiring: [`.cursor/scripts/onboarding.sh`](/Users/lume/repos/agent-dock/.cursor/scripts/onboarding.sh)
+- Claude-specific wiring: [`.claude/scripts/onboarding.sh`](/Users/lume/repos/agent-dock/.claude/scripts/onboarding.sh)
 
 ## Dependency Map
 
@@ -211,7 +211,7 @@ Single-source rule for skills:
 ### 3. Codex bootstrap
 
 When enabled, the internal Codex script:
-- generates `.codex/agents/config/*.toml` from [`.codex/scripts/render-agent-configs.py`](/Users/lume/repos/codex-home/.codex/scripts/render-agent-configs.py)
+- generates `.codex/agents/config/*.toml` from [`.codex/scripts/render-agent-configs.py`](/Users/lume/repos/agent-dock/.codex/scripts/render-agent-configs.py)
 - upserts a trusted project block into `.codex/config.local.toml`
 - generates `.codex/config.toml` by concatenating `.codex/config.base.toml` with `.codex/config.local.toml`
 - ensures the `codex` CLI exists, installing it with `npm install -g @openai/codex` if needed
@@ -328,7 +328,7 @@ Managed Claude paths:
 
 ## Filesystem Effects and Safety Rules
 
-Path management uses helper functions in [`scripts/onboarding-lib.sh`](/Users/lume/repos/codex-home/scripts/onboarding-lib.sh).
+Path management uses helper functions in [`scripts/onboarding-lib.sh`](/Users/lume/repos/agent-dock/scripts/onboarding-lib.sh).
 
 Safety rules:
 - existing conflicting paths are backed up with a timestamped suffix

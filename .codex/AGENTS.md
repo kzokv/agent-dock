@@ -31,4 +31,4 @@ per-tool notes), read `~/.codex/MANIFEST.md`. Provenance pointer: `~/.codex/ORIG
 
 ## Repo Rule
 
-- This `codex-home` repo must not define repo-local `.agents/skills`.
+- This `agent-dock` repo must not define repo-local `.agents/skills`.

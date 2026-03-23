@@ -18,7 +18,7 @@ This configures `core.hooksPath=.githooks` so local commits are validated by `.g
 
 `./scripts/onboarding.sh` validates your `gh` CLI auth by default, always wires the shared `~/.codex` and `~/.agents/skills` paths, and can also install the Codex CLI plus `codex-net` when Codex bootstrap runs.
 
-The canonical onboarding reference, including side effects, topology, and flow diagrams, lives in [`docs/onboarding.md`](/Users/lume/repos/codex-home/docs/onboarding.md).
+The canonical onboarding reference, including side effects, topology, and flow diagrams, lives in [`docs/onboarding.md`](/Users/lume/repos/agent-dock/docs/onboarding.md).
 
 Once onboarding succeeds, use:
 

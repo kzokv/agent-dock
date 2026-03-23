@@ -49,7 +49,7 @@ need_cmd() {
 
 need_cmd rg
 
-fixtures_root="$(mktemp -d "${TMPDIR:-/tmp}/codex-home-onboarding-tests.XXXXXX")"
+fixtures_root="$(mktemp -d "${TMPDIR:-/tmp}/agent-dock-onboarding-tests.XXXXXX")"
 
 cleanup() {
   if [ "$keep_fixtures" = "1" ]; then
@@ -322,7 +322,7 @@ test_interactive_menu_shows_and_accepts_selection() {
   create_fake_gh "$bin_dir" "$gh_state" "$gh_log"
   printf '2\n' | HOME="$fixture_home" XDG_BIN_HOME="$xdg_bin" PATH="${bin_dir}:${PATH}" ONBOARDING_FORCE_INTERACTIVE=1 "$fixture_repo/scripts/onboarding.sh" >"$output_file" 2>&1
 
-  assert_file_contains "$output_file" 'codex-home onboarding'
+  assert_file_contains "$output_file" 'agent-dock onboarding'
   assert_file_contains "$output_file" 'Choose agent home(s) to onboard:'
   [ -d "$fixture_home/.cursor" ] || fail "Expected Cursor home directory: $fixture_home/.cursor"
   assert_symlink_target_canonical "$fixture_home/.cursor/agents" "$fixture_repo/.cursor/agents"
@@ -395,7 +395,7 @@ test_skills_library_removed() {
 test_direct_codex_script_is_blocked() {
   local fixture_repo="$fixtures_root/repo-direct-codex"
   local output_file="$fixtures_root/direct-codex.out"
-  mkdir -p "$fixtures_root/direct-codex-home"
+  mkdir -p "$fixtures_root/direct-agent-dock"
   prepare_fixture_repo "$fixture_repo"
 
   assert_command_fails_with "$output_file" "$fixture_repo/.codex/scripts/onboarding.sh"

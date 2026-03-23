@@ -11,7 +11,7 @@ OUTPUT_JSON=0
 print_help() {
   cat <<EOF_HELP
 Description:
-  Report approximate fresh-session bootstrap cost for the shared codex-home policy, the
+  Report approximate fresh-session bootstrap cost for the shared agent-dock policy, the
   active repository policy, enabled user skills, system skills, repo-local skills, and
   optional worklog files. Token estimates use chars/4 and normalized skill paths to stay
   stable across runs.

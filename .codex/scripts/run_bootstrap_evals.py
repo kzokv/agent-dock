@@ -71,7 +71,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run paired baseline vs candidate bootstrap-quality evals and retrieval checks."
     )
-    parser.add_argument("--shared-repo", default=str(Path(__file__).resolve().parents[2]), help="Path to codex-home repo")
+    parser.add_argument("--shared-repo", default=str(Path(__file__).resolve().parents[2]), help="Path to agent-dock repo")
     parser.add_argument("--target-repo", required=True, help="Path to the repository to evaluate as the working repo")
     parser.add_argument("--baseline-ref", default="HEAD", help="Git ref to use as the prompt baseline")
     parser.add_argument("--output-dir", help="Directory for eval artifacts")
