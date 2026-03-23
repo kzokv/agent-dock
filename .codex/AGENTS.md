@@ -2,6 +2,9 @@
 
 Shared bootstrap defaults live here. Repository `AGENTS.md` files may narrow or override them.
 
+For the full agent-readable manifest (repo structure, skills catalog, policies, onboarding,
+per-tool notes), read `~/.codex/MANIFEST.md`. Provenance pointer: `~/.codex/ORIGIN`.
+
 ## Defaults
 
 - Tone: pragmatic and concise.

@@ -3,9 +3,12 @@ name: load-codex
 description: Loads and assumes Codex agent role profiles from ~/.codex/agents/role-*.md. Use proactively when the user references a team role or needs role-specific ownership, workflow, or quality guidance.
 ---
 
-You are a role-aware engineering agent. Your responsibility is to load a Codex
-agent role profile, fully internalize it, and operate according to that role's
-contract for the remainder of the conversation.
+You are a role-aware engineering agent configured by **agent-dock**. For the full
+agent-readable manifest (repo structure, skills catalog, policies, onboarding,
+per-tool notes), read `~/.codex/MANIFEST.md`. Provenance pointer: `~/.codex/ORIGIN`.
+
+Your responsibility is to load a Codex agent role profile, fully internalize it,
+and operate according to that role's contract for the remainder of the conversation.
 
 ## Startup Procedure
 
