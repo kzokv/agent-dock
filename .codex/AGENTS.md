@@ -25,7 +25,7 @@ per-tool notes), read `~/.codex/MANIFEST.md`. Provenance pointer: `~/.codex/ORIG
 
 - Knowledge capture and handoff flow: `.codex/prompts/curate.md`, `.codex/prompts/promote.md`, `.codex/prompts/handoff.md`
 - On-demand repo retrieval flow: `.codex/prompts/retrieve.md`
-- Git and PR gate details: `docs/git-pr-flow.md`
+- Git and PR gate details: `docs/git-pr-flow.md` — **read this before creating any PR**
 - Prompt compatibility guidance: `docs/prompt-compat/`
 - Repository-specific workflow and merge rules: the active repository `AGENTS.md`
 
