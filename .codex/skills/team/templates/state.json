@@ -1,0 +1,24 @@
+{
+  "task": "",
+  "tier": 0,
+  "iteration": 1,
+  "max_iterations": 3,
+  "phase": "init",
+  "wave": 1,
+  "branch": "",
+  "exit_check": {
+    "tests_green": false,
+    "findings_addressed": false,
+    "no_regressions": false
+  },
+  "teammates": {},
+  "phase_history": [],
+  "commits": [],
+  "escalations": [],
+  "cost": {
+    "estimated_usd": "",
+    "notes": ""
+  },
+  "started_at": "",
+  "updated_at": ""
+}
