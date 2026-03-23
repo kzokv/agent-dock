@@ -1,98 +1,95 @@
-# codex-home
+# agent-dock
 
-Personal coding-agent config repo shared across machines.
+A shared, forkable policy and skills monorepo for AI coding agents. Agent-dock is the
+canonical source of truth for global settings, behavioral policies, skills, prompts, and
+role definitions consumed by multiple agent tools (Claude Code, Cursor, Codex, and more).
 
-This repository now manages three tracked agent homes:
-- `.codex` for shared policy, roles, prompts, skills, config, and support scripts
-- `.cursor` for a tracked `agents` symlink to `.codex/agents` and a tracked `skills` symlink to `.codex/skills`
-- `.claude` for tracked agents, rules, skills symlink, versioned memory, and base settings
+Agents dock here, load their config, and go work in other projects.
 
-`README.md` is the operator guide. The shared Codex policy source of truth lives at `.codex/AGENTS.md`.
+## How it works
+
+1. Clone or fork this repo
+2. Run `./scripts/onboarding.sh` to wire agent-dock into your system
+3. Onboarding creates symlinks so each agent tool reads from this repo at runtime:
+   - `~/.codex` → `.codex/` (shared policy, skills, roles, prompts)
+   - `~/.claude` → `.claude/` (Claude Code config, rules, memory)
+   - `~/.cursor` agents/skills → `.codex/` equivalents
+   - `~/.agents/skills` → `~/.codex/skills`
+4. A provenance pointer (`~/.codex/ORIGIN`) tells agents where their config comes from
+5. The agent-readable manifest (`~/.codex/MANIFEST.md`) gives any agent full context
 
 ## Layout
 
 Tracked:
-- `.codex/`
-- `.cursor/`
-- `.claude/`
-- `.github/`
-- `.githooks/`
-- `docs/`
-- `notes/`
-- `scripts/`
 
-Generated or machine-local:
-- `.codex/config.toml`
-- `.codex/config.local.toml`
-- `.codex/agents/config/*.toml`
-- caches
-- secrets
-- runtime state
+| Directory | Purpose |
+|---|---|
+| `.codex/` | Shared policy, roles, prompts, 74+ skills, config, scripts |
+| `.claude/` | Claude Code agent home (rules, memory, settings) |
+| `.cursor/` | Cursor agent home (agents/skills symlinks) |
+| `scripts/` | Onboarding orchestrator and shared helpers |
+| `docs/` | Onboarding reference, git-pr-flow runbook, prompt compatibility |
+
+Generated or machine-local: `.codex/config.toml`, `.codex/agents/config/*.toml`, caches, secrets, runtime state.
 
 ## Quick start
 
-Run onboarding:
-
 ```bash
+# Interactive (shows agent-selection menu)
 ./scripts/onboarding.sh
-```
 
-The script shows an agent-selection menu when run interactively and defaults to `all`.
-
-For automation:
-
-```bash
-./scripts/onboarding.sh --agent codex --skip-gh-auth
+# Target a specific agent
+./scripts/onboarding.sh --agent claude
+./scripts/onboarding.sh --agent cursor
+./scripts/onboarding.sh --agent codex
 ./scripts/onboarding.sh --agent all
-./scripts/onboarding.sh --agent cursor --without-codex-bootstrap
-./scripts/onboarding.sh --agent cursor --with-codex-bootstrap --skip-gh-auth
+
+# Automation mode
+./scripts/onboarding.sh --agent all --skip-gh-auth
+./scripts/onboarding.sh --agent cursor --with-codex-bootstrap
 ```
 
-If you want the Codex CLI network-enabled launcher, run onboarding with Codex bootstrap enabled and then use:
+After onboarding, use the launchers:
 
 ```bash
-codex-net
+claude-dev                              # tmux session + Claude Code
+claude-dev --no-tmux                    # bypass tmux, run directly
+codex-net                               # Codex with network-enabled sandbox
 ```
 
-After Claude onboarding, use the permission-skipping launcher:
+## For agents
 
-```bash
-claude-dev                                       # tmux session + claude
-claude-dev --no-tmux                             # bypass tmux, run directly
-CLAUDE_DEV_TMUX_SESSION=work2 claude-dev         # custom session name
-```
+If you are an AI agent reading this, your full context is at `~/.codex/MANIFEST.md`.
+That document contains: repo structure, skills catalog, policy summary, onboarding
+mechanics, and per-tool integration notes.
 
-Canonical onboarding reference:
-- [`docs/onboarding.md`](/Users/lume/repos/codex-home/docs/onboarding.md)
+The repo path is stored in `~/.codex/ORIGIN`.
 
-That document is the single source of truth for:
-- onboarding behavior and side effects
-- config and skills topology
-- script/data flow and dependency diagrams
-- flag behavior for agent/bootstrap combinations
-- validation and rerun semantics
+## Customizing your fork
+
+1. **Policies** — edit `.codex/AGENTS.md` for global defaults
+2. **Skills** — add or modify skills in `.codex/skills/`
+3. **Rules** — add Claude-specific rules in `.claude/rules/`
+4. **Roles** — define team roles in `.codex/agents/role-*.md`
+5. **Prompts** — customize decision/retrieval flows in `.codex/prompts/`
+
+Re-run `./scripts/onboarding.sh` after changes to re-wire symlinks.
 
 ## Validation and maintenance
 
-Use:
-
 ```bash
-./.codex/scripts/test-onboarding.sh
-./.codex/scripts/validate-role-skill-topology.py
-./.codex/scripts/check-config-migration.sh
-./.codex/scripts/bootstrap-budget.sh --repo /path/to/project
-python3 ./.codex/scripts/rlm_retrieval.py build --repo /path/to/project
-python3 ./.codex/scripts/run_bootstrap_evals.py --target-repo /path/to/project --json
-./.codex/scripts/install-required-skills.sh
-./.codex/scripts/setup-git-hooks.sh
+./.codex/scripts/test-onboarding.sh                          # onboarding regression tests
+./.codex/scripts/validate-role-skill-topology.py              # topology validation
+./.codex/scripts/check-config-migration.sh                    # config migration check
+./.codex/scripts/bootstrap-budget.sh --repo /path/to/project  # bootstrap cost report
+./.codex/scripts/install-required-skills.sh                   # install required skills
+./.codex/scripts/setup-git-hooks.sh                           # enable commit-msg hooks
 ```
 
 ## Policy and merge gates
 
-Shared policy source: `.codex/AGENTS.md`
-Operator runbook: `docs/git-pr-flow.md`
-
-Repo enforcement points:
-- `.github/pull_request_template.md`
-- `.github/workflows/pr-gate.yml`
-- `.githooks/commit-msg`
+- Shared policy: `.codex/AGENTS.md`
+- Agent manifest: `.codex/MANIFEST.md`
+- Operator runbook: `docs/git-pr-flow.md`
+- Onboarding reference: `docs/onboarding.md`
+- CI enforcement: `.github/workflows/pr-gate.yml`, `.githooks/commit-msg`

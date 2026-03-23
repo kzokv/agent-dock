@@ -1,7 +1,7 @@
 # Runbook - codex-script-suite
 
 - Service: codex-script-suite
-- Owner: codex-home-maintainers
+- Owner: agent-dock-maintainers
 - Environment: local-shared
 - Last verified: 2026-03-12
 
@@ -38,7 +38,7 @@ Critical user impact:
 - Run commands from the repo root:
 
 ```bash
-cd /Users/lume/repos/codex-home
+cd /Users/lume/repos/agent-dock
 ```
 
 - Required local tools on PATH:
@@ -198,7 +198,7 @@ Recommended full invocation:
 rm -rf /tmp/bootstrap-evals
 python3 ./.codex/scripts/run_bootstrap_evals.py \
   --target-repo /path/to/target-repo \
-  --shared-repo /Users/lume/repos/codex-home \
+  --shared-repo /Users/lume/repos/agent-dock \
   --baseline-ref HEAD \
   --output-dir /tmp/bootstrap-evals \
   --timeout-seconds 180 \
@@ -271,7 +271,7 @@ python3 ./.codex/scripts/rlm_retrieval.py status --repo . --json
 ## Escalation
 
 - L1: active repo maintainer making the change
-- L2: `codex-home-maintainers`
+- L2: `agent-dock-maintainers`
 - L3: platform/engineering owner for shared agent bootstrap and policy
 
 Escalate immediately when:

@@ -1,6 +1,10 @@
-# codex-home
+# agent-dock
 
-Personal coding-agent config repo. Shared policy source of truth: `.codex/AGENTS.md`.
+Shared AI agent policy and skills monorepo. For the full agent-readable manifest
+(repo structure, skills catalog, policies, onboarding, per-tool notes), read
+`~/.codex/MANIFEST.md`. Provenance pointer: `~/.codex/ORIGIN`.
+
+Shared policy source of truth: `.codex/AGENTS.md`.
 
 ## Repo Structure
 

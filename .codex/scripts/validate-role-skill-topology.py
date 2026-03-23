@@ -203,7 +203,7 @@ def validate_repo_skill_policy() -> list[str]:
     disallowed_repo_skills = REPO_ROOT / ".agents" / "skills"
     if disallowed_repo_skills.exists():
         errors.append(
-            f"{disallowed_repo_skills}: disallowed in codex-home; use .codex/skills as the shared skill source instead"
+            f"{disallowed_repo_skills}: disallowed in agent-dock; use .codex/skills as the shared skill source instead"
         )
     return errors
 
