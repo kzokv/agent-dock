@@ -100,10 +100,10 @@ Example:
 
 Before handoff, PR must have:
 
-- assignee
-- primary label matching PR content (`bug`, `enhancement`, or `documentation`)
-
-Additional labels are allowed.
+- assignee — use `--assignee @me` as default
+- at least one primary label matching PR content (`bug`, `enhancement`, `documentation`)
+- multiple primary labels allowed when the PR spans categories
+- if no existing label fits the change context, ask the user for approval before creating a new label
 
 ### Label-to-content mapping
 
@@ -189,7 +189,7 @@ gh pr edit <number> --add-assignee @me --add-label <label>
 
 - scoped Conventional Commit title, or repository-defined ticket-gated title when applicable
 - required assignee
-- required primary label from allow-list (`bug`, `enhancement`, `documentation`)
+- at least one primary label from allow-list (`bug`, `enhancement`, `documentation`)
 - required body sections
 - `## Testing` evidence-or-waiver contract
 
