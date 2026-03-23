@@ -655,6 +655,11 @@ ensure_shared_onboarding_paths() {
   mkdir -p "$agents_home"
   ensure_path_symlink "$agents_skills_dir" "${codex_home}/skills" "Shared agent skills" "$timestamp"
   remove_agents_skills_library "$agents_skills_library_dir" "$timestamp"
+
+  # Write provenance pointer so agents in other projects know where their config originates
+  local origin_file="${codex_home}/ORIGIN"
+  printf '%s\n' "$repo_root" > "$origin_file"
+  log "Wrote provenance pointer: $origin_file -> $repo_root"
 }
 
 resolve_claude_cli_path() {
