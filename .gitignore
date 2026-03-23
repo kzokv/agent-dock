@@ -51,6 +51,7 @@ __pycache__/
 .codex/**/__pycache__/
 .codex/**/*.pyc
 .codex/**/*.pyo
+.codex/ORIGIN
 
 # Session 
 session_index.jsonl
@@ -60,6 +61,8 @@ cache/**
 *.sqlite*
 
 # Claude Code runtime artifacts
+.claude/tasks/
+.claude/teams/
 .claude/backups/
 .claude/cache/
 .claude/downloads/
