@@ -11,7 +11,7 @@ Spawn an agent team for a task. If no tier is specified, analyze the task and re
 
 ## Prerequisites
 
-No special permission setup required. Memory staging uses `.team/memory/` (created alongside `.team/state.json`), which is outside the protected `.claude/` directory and does not trigger permission prompts in `bypassPermissions` mode.
+No special permission setup required. Memory staging uses `.worklog/team/memory/` (created alongside `.worklog/team/state.json`), which is outside the protected `.claude/` directory and does not trigger permission prompts in `bypassPermissions` mode.
 
 ---
 
@@ -76,14 +76,14 @@ Wait for user confirmation.
 
 ### Step 4 — Initialize state
 
-1. Create `.team/` directory if it doesn't exist
-2. Write `.team/state.json` from `templates/state.json`, populated with:
+1. Create `.worklog/team/` directory if it doesn't exist
+2. Write `.worklog/team/state.json` from `templates/state.json`, populated with:
    - Task description
    - Selected tier
    - `iteration: 1`, `phase: "init"`
    - `branch`: output of `git branch --show-current`
    - `teammates`: empty object (populated by Architect as teammates are spawned)
-3. Ensure `.team/` is in `.gitignore`
+3. Create `.worklog/team/memory/` subdirectory if it doesn't exist
 
 ### Step 5 — Spawn the Architect
 
@@ -102,7 +102,7 @@ Agent({
 1. The full task description and acceptance criteria
 2. The technical plan/spec from pre-team scoping
 3. The tier and expected teammate roster
-4. Path to `.team/state.json`
+4. Path to `.worklog/team/state.json`
 5. The message prefix convention (Architect ↔ Main Session and Teammate ↔ Architect)
 6. Instructions to create the technical design as its first action
 7. Instructions to send `[SPAWN]` to main session when ready for teammates
@@ -112,10 +112,10 @@ Agent({
    - `references/escalation-rules.md` — read for decision boundaries
    - `references/memory-categories.md` — read for memory staging guidance
 9. Instructions to read `AGENTS.md` and/or `CLAUDE.md` in the target project for project-specific conventions and test commands
-10. **Absolute memory staging path** — include the resolved absolute path to the project's `.team/memory/` directory. This prevents CWD-relative path resolution errors when teammates write staged memory files:
+10. **Absolute memory staging path** — include the resolved absolute path to the project's `.worklog/team/memory/` directory. This prevents CWD-relative path resolution errors when teammates write staged memory files:
     ```
-    Memory staging path: {absolute-path-to-project}/.team/memory/
-    Write staged memory files to: {absolute-path-to-project}/.team/memory/{teammate-name}.md
+    Memory staging path: {absolute-path-to-project}/.worklog/team/memory/
+    Write staged memory files to: {absolute-path-to-project}/.worklog/team/memory/{teammate-name}.md
     Do NOT use relative paths — always use the absolute path above.
     Do NOT write to .claude/memory/ — it is a protected directory that prompts for permission even in bypassPermissions mode.
     ```
@@ -177,7 +177,7 @@ The main session:
    - File paths to read on-demand: `references/convergence-loop.md` (their phases), `references/escalation-rules.md`
    - **Absolute memory staging path** (same value passed to the Architect — prevents CWD-relative path errors):
      ```
-     Write your staged memory file to: {absolute-path-to-project}/.team/memory/{your-name}.md
+     Write your staged memory file to: {absolute-path-to-project}/.worklog/team/memory/{your-name}.md
      Use this exact absolute path — never relative paths.
      Do NOT write to .claude/memory/ — it is protected and will prompt for permission.
      ```

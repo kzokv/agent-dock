@@ -11,7 +11,7 @@ Remove teammates from a running team mid-execution by downgrading to a lower tie
 
 ## Prerequisites
 
-- A team must be running (check `.team/state.json` exists)
+- A team must be running (check `.worklog/team/state.json` exists)
 - Current tier must be greater than 1
 
 ---
@@ -20,7 +20,7 @@ Remove teammates from a running team mid-execution by downgrading to a lower tie
 
 ### Step 1 — Read current state
 
-Read `.team/state.json` to determine:
+Read `.worklog/team/state.json` to determine:
 - Current tier
 - Current phase and iteration
 - Use `TaskList` to see which teammates are active/idle and what they're working on
@@ -60,7 +60,7 @@ The Architect:
 1. Sends shutdown messages to removed teammates via `SendMessage`
 2. Reassigns any open tasks from removed teammates
 3. Adjusts the convergence loop (e.g., at Tier 1: skip Code Review in Phase 3, Implementer fixes own failures)
-4. Updates `.team/state.json` with the new tier
+4. Updates `.worklog/team/state.json` with the new tier
 
 ### Step 6 — Confirm
 

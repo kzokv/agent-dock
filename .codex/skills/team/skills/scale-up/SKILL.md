@@ -11,7 +11,7 @@ Add teammates to a running team mid-execution by upgrading to a higher tier.
 
 ## Prerequisites
 
-- A team must be running (check `.team/state.json` exists)
+- A team must be running (check `.worklog/team/state.json` exists)
 - Current tier must be less than 3
 
 ---
@@ -20,7 +20,7 @@ Add teammates to a running team mid-execution by upgrading to a higher tier.
 
 ### Step 1 — Read current state
 
-Read `.team/state.json` to determine:
+Read `.worklog/team/state.json` to determine:
 - Current tier
 - Current phase and iteration
 - Use `TaskList` to see which teammates are active/idle
@@ -58,7 +58,7 @@ The Architect sends `[SPAWN]` to the main session with the new teammate roster. 
 
 ### Step 5 — Update state
 
-The Architect updates `.team/state.json` with the new tier.
+The Architect updates `.worklog/team/state.json` with the new tier.
 
 ### Step 6 — Confirm
 

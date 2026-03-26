@@ -61,7 +61,7 @@ The user owns the plan. The team executes it.
 
 The team assumes it is running inside a **git worktree** that the user created manually before invoking `/team`. The team does NOT create branches, commit, or push — the human handles the final commit process after the team shuts down.
 
-- The Architect records the branch name in `.team/state.json` at init (reads from `git branch --show-current`)
+- The Architect records the branch name in `.worklog/team/state.json` at init (reads from `git branch --show-current`)
 - Teammates do NOT run `git add`, `git commit`, or `git push`
 - All file changes remain uncommitted on disk for human review
 - If the user needs to checkpoint mid-run, they do it manually outside the team
@@ -105,45 +105,29 @@ See `references/tier-heuristics.md` for selection criteria.
 |---------|-----------|
 | Team creation | `TeamCreate` → creates team + shared task list |
 | Work items | `TaskCreate` / `TaskUpdate` / `TaskList` |
-| Coordination | `SendMessage` between teammates with prefix conventions |
-| Loop control | `.team/state.json` (phase, iteration, exit checks, tier, escalation log) |
+| Coordination | Hybrid: `TaskUpdate` (durable) + `SendMessage` (hints). See `references/message-protocol.md` |
+| Loop control | `.worklog/team/state.json` (phase, iteration, exit checks, tier, escalation log) |
 
-The Architect is the sole writer to `.team/state.json` — no lock protocol needed.
+The Architect is the sole writer to `.worklog/team/state.json` — no lock protocol needed.
 
-### Message conventions
+### Message protocol
 
-All inter-agent communication uses prefix conventions for reliable routing.
+All inter-agent communication uses a **hybrid model** with two channels:
 
-**Architect <-> Main Session:**
+- **Durable channel** (TaskUpdate/TaskCreate/TaskList) — for critical-path signals (`[DONE]`, `[BLOCKED]`, `[GO]`, task assignments). These cannot be lost.
+- **Hint channel** (SendMessage) — non-authoritative notifications and conversational messages. Loss is tolerable; the Architect's 60s polling loop catches anything dropped.
 
-| Prefix | Direction | Meaning |
-|--------|-----------|---------|
-| `[STATUS]` | Architect → Main | Phase transition, iteration progress |
-| `[ESCALATE]` | Architect → Main | Needs user decision |
-| `[SPAWN]` | Architect → Main | Needs new teammates spawned (structured payload) |
-| `[SHUTDOWN]` | Architect → Main | All green, team done |
-| `[HEARTBEAT]` | Architect → Main | Still alive, working (every 10 min of silence) |
-| `[USER]` | Main → Architect | Relaying user message |
-
-**Teammate <-> Architect:**
-
-| Prefix | Direction | Meaning |
-|--------|-----------|---------|
-| `[DONE:CLEAN]` | Teammate → Architect | Task complete, no issues |
-| `[DONE:FINDINGS]` | Teammate → Architect | Task complete, findings attached |
-| `[BLOCKED]` | Teammate → Architect | Can't proceed |
-| `[CYCLE]` | Teammate → Architect | Repeat failure detected (Fixer) |
-| `[QUESTION]` | Teammate → Architect | Needs clarification |
+See `references/message-protocol.md` for the full protocol specification, including message prefix conventions, the Architect polling loop, and teammate timeout detection.
 
 ### Memory staging
 
-All teammates (including Architect) write memory candidates to `.team/memory/{teammate-name}.md` during execution. No locks needed — each teammate owns their own file.
+All teammates (including Architect) write memory candidates to `.worklog/team/memory/{teammate-name}.md` during execution. No locks needed — each teammate owns their own file.
 
-**Why `.team/memory/` and not `.claude/memory/`?** The `.claude/` directory is protected by Claude Code — `bypassPermissions` mode does NOT bypass write prompts for `.claude/memory/`. Only `.claude/commands/`, `.claude/agents/`, and `.claude/skills/` are exempt. Writing to `.claude/memory/` causes teammates to stall on interactive permission dialogs.
+**Why `.worklog/team/memory/` and not `.claude/memory/`?** The `.claude/` directory is protected by Claude Code — `bypassPermissions` mode does NOT bypass write prompts for `.claude/memory/`. Only `.claude/commands/`, `.claude/agents/`, and `.claude/skills/` are exempt. Writing to `.claude/memory/` causes teammates to stall on interactive permission dialogs.
 
 Consolidation happens once at wrap-up:
-- **Tier 1-2**: Architect writes consolidated entries to `.team/memory/consolidated.md`. Main session prompts user to approve batch write to `.claude/memory/` after [SHUTDOWN].
-- **Tier 3**: Memory Curator (Wave 2) writes consolidated entries to `.team/memory/consolidated.md`. Main session prompts user to approve batch write to `.claude/memory/` after [SHUTDOWN].
+- **Tier 1-2**: Architect writes consolidated entries to `.worklog/team/memory/consolidated.md`. Main session prompts user to approve batch write to `.claude/memory/` after [SHUTDOWN].
+- **Tier 3**: Memory Curator (Wave 2) writes consolidated entries to `.worklog/team/memory/consolidated.md`. Main session prompts user to approve batch write to `.claude/memory/` after [SHUTDOWN].
 
 See `references/memory-categories.md` for what to capture.
 
@@ -166,6 +150,7 @@ When the user invokes `/team`:
 ## Key References
 
 - `references/role-definitions.md` — All 8 roles (Main Session + 7 team roles) with per-tier variants
+- `references/message-protocol.md` — Hybrid message protocol (durable + hint channels, polling loop)
 - `references/convergence-loop.md` — Phases, exit criteria, Architect self-check
 - `references/tier-heuristics.md` — Tier selection criteria
 - `references/escalation-rules.md` — When Architect decides vs. escalates to human

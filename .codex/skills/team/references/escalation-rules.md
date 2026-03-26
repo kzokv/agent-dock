@@ -113,7 +113,7 @@ Waiting for your decision.
 ```
 
 3. **If user picks A:** Architect restarts the timer with the user-specified duration. Extension count increments. After 3rd extension expires → auto-force-stop (no re-ask).
-4. **If user picks B:** Main session calls `TaskStop` on each stuck task, confirms back to Architect via `[USER]`. Architect sets stuck teammates to `"force_stopped"` in `.team/state.json` and sends `[SHUTDOWN]`.
+4. **If user picks B:** Main session calls `TaskStop` on each stuck task, confirms back to Architect via `[USER]`. Architect sets stuck teammates to `"force_stopped"` in `.worklog/team/state.json` and sends `[SHUTDOWN]`.
 5. **If user picks C:** Main session triggers `/team abort` flow.
 
 ---
@@ -122,7 +122,7 @@ Waiting for your decision.
 
 When the Architect detects a teammate has not responded within the timeout window (8 min + 2 min grace after check-in):
 
-1. Architect marks teammate as `unresponsive` in `.team/state.json`
+1. Architect marks teammate as `unresponsive` in `.worklog/team/state.json`
 2. Architect sends `[ESCALATE]` to main session:
 
 ```

@@ -1,6 +1,6 @@
 # Convergence Loop
 
-The core execution engine for agent teams. All tiers use this loop — teammates present vary by tier. The Architect (persistent teammate) orchestrates phase transitions via `SendMessage` and `TaskCreate`/`TaskUpdate`.
+The core execution engine for agent teams. All tiers use this loop — teammates present vary by tier. The Architect (persistent teammate) orchestrates phase transitions via the hybrid message protocol (see `message-protocol.md`).
 
 ---
 
@@ -22,8 +22,9 @@ CONVERGENCE LOOP (default max: 3 iterations)
 │  └── Senior QA          write / update test scripts → iterate until own tests green
 │
 │  Phase 3 — Review + Validate (parallel)
-│  ├── Code Reviewer      reviews changed files → findings report (Tier 2-3)
-│  └── Validator          full pipeline → failure report
+│  ├── Architect          architectural review → design alignment findings (All tiers)
+│  ├── Code Reviewer      mechanical quality review → code quality findings (Tier 2-3)
+│  └── Validator          full pipeline → failure report (All tiers)
 │
 │  Phase 4 — Fix
 │  └── Fixer              fixes failures + findings → re-runs affected tests (Tier 2-3)
@@ -38,14 +39,14 @@ CONVERGENCE LOOP (default max: 3 iterations)
 └── end loop
 
 WRAP-UP (runs once, after loop exits)
-├── Architect consolidates memory to .team/memory/consolidated.md (Tier 1-2)
+├── Architect consolidates memory to .worklog/team/memory/consolidated.md (Tier 1-2)
 ├── Architect sends [SPAWN] for Wave 2 (Tier 3)
 ├── Technical Writer    updates ALL relevant docs (Tier 3, Wave 2)
 ├── Code Reviewer       reviews Technical Writer output (Tier 3, Wave 2)
 ├── Technical Writer    addresses review findings if any (Tier 3, Wave 2)
-├── Memory Curator      consolidates staged memory to .team/memory/consolidated.md (Tier 3, Wave 2)
+├── Memory Curator      consolidates staged memory to .worklog/team/memory/consolidated.md (Tier 3, Wave 2)
 ├── Architect sends [SHUTDOWN] to main session
-└── Main session prompts user to consolidate .team/memory/ → .claude/memory/
+└── Main session prompts user to consolidate .worklog/team/memory/ → .claude/memory/
 ```
 
 ---
@@ -57,7 +58,10 @@ WRAP-UP (runs once, after loop exits)
 | 1 | Implements feature/fix | Plans tests (no file writes) | First full run | Fixes initial failures + findings |
 | 2+ | Fixes regressions from prior fixes | Updates broken/missing tests | Re-runs full suite, flags new regressions | Fixes remaining failures + findings |
 
-**Note:** QA defers all test writing to Phase 2. Phase 1 is plan-only for QA to prevent concurrent file writes in the same worktree.
+**Phase sequencing:**
+- **Phase 1 is parallel:** TDD Implementer writes code while QA plans tests — no file-write conflicts because QA is plan-only in Phase 1.
+- **Phase 2 starts after Implementer completes Phase 1:** QA needs actual code to write test scripts against. Architect waits for Implementer's `[DONE:*]` before starting Phase 2.
+- **Phase 3 starts after both Phase 1 AND Phase 2 complete:** see Phase 3 gate below.
 
 ---
 
@@ -104,15 +108,7 @@ This prevents burning iterations on symptoms of a flawed design.
 
 ## Teammate timeout detection
 
-The Architect tracks responsiveness for all teammates:
-
-1. **Timer starts** when the Architect assigns a task via `SendMessage`
-2. **8-minute threshold:** If no `[DONE:*]`, `[BLOCKED]`, `[QUESTION]`, or `[CYCLE]` received within 8 minutes, the Architect sends a check-in: `Are you still working on [task]? Send a status update.`
-3. **2-minute grace:** If no response within 2 minutes after check-in, the Architect:
-   - Updates `.team/state.json`: sets teammate status to `unresponsive`
-   - Sends `[ESCALATE]` to main session: `Teammate {name} unresponsive after check-in. Options: (A) retry the task with a new agent, (B) reassign to another teammate, (C) abort.`
-
-This prevents the team from stalling silently when a teammate crashes or runs out of context.
+See `message-protocol.md` for the full timeout detection protocol. Summary: 8-minute threshold on task staleness (detected via `TaskList` polling), 2-minute grace after check-in, then escalation.
 
 ---
 
@@ -120,7 +116,7 @@ This prevents the team from stalling silently when a teammate crashes or runs ou
 
 The team does NOT create commits. All file changes remain uncommitted on disk.
 
-- The Architect records the current branch in `.team/state.json` at init
+- The Architect records the current branch in `.worklog/team/state.json` at init
 - No teammate runs `git add`, `git commit`, or `git push`
 - The human handles the final commit process after `[SHUTDOWN]`
 
@@ -128,44 +124,38 @@ The team does NOT create commits. All file changes remain uncommitted on disk.
 
 ## Phase transition protocol
 
-The Architect (persistent teammate) manages all phase transitions using Claude Code's team tools and `.team/state.json`.
+The Architect (persistent teammate) manages all phase transitions using Claude Code's team tools, the hybrid message protocol (`message-protocol.md`), and `.worklog/team/state.json`.
 
 ### Starting a phase
 
-1. Update `.team/state.json` with new phase and iteration
+1. Update `.worklog/team/state.json` with new phase and iteration
 2. Create tasks for the phase using `TaskCreate`
 3. Assign tasks to the appropriate teammates using `TaskUpdate` with `owner`
-4. Message teammates with context using `SendMessage`:
-   ```
-   SendMessage({
-     to: "tdd-implementer",
-     message: "Phase 1 starting. Your task: [description]. Technical design: [summary]."
-   })
-   ```
+4. Send SendMessage hints to teammates with context (non-authoritative — task assignment is the durable signal)
 5. Send `[STATUS]` to main session: `[STATUS] Phase 1, iteration 1 starting.`
 
 ### Completing a phase
 
-1. Teammates send `[DONE:CLEAN]` or `[DONE:FINDINGS]` when done
-2. Architect waits for all phase teammates to report `[DONE:*]`
+1. Teammates call `TaskUpdate(status: "completed", result: "...")` when done, plus a `[DONE] check TaskList` hint via SendMessage
+2. Architect discovers completions via its 60s polling loop (or immediately via hint)
 3. Architect reviews results
-4. Architect updates `.team/state.json`
+4. Architect updates `.worklog/team/state.json`
 5. Architect creates tasks for the next phase
 
 ### Phase 3 gate — explicit [GO] required
 
-**The Architect MUST NOT start Phase 3 until both Phase 1 (TDD Implementer) AND Phase 2 (Senior QA) have reported `[DONE:*]`.** Starting Phase 3 before QA finishes wastes a full validation cycle on expected failures.
+**The Architect MUST NOT start Phase 3 until both Phase 1 (TDD Implementer) AND Phase 2 (Senior QA) have reported completion via `TaskUpdate`.** Starting Phase 3 before QA finishes wastes a full validation cycle on expected failures.
 
 Protocol:
-1. Wait for `[DONE:*]` from TDD Implementer (Phase 1 complete)
-2. Wait for `[DONE:*]` from Senior QA (Phase 2 complete — test scripts written and passing locally)
-3. Only then send explicit `[GO]` to Validator: `"Phase 3 starting. Run the full pipeline now."`
+1. Poll `TaskList` — wait for TDD Implementer's task to show `completed` (Phase 1 done)
+2. Poll `TaskList` — wait for Senior QA's task to show `completed` (Phase 2 done — test scripts written and passing locally)
+3. Only then send `[GO]` to Validator via `TaskUpdate` on the Validator's task (set status to `in_progress` with note: `Phase 3 starting. Run the full pipeline now.`)
 4. The Validator must NOT self-activate based on task availability — it waits for the explicit `[GO]`
 
 ### Between iterations
 
 1. Architect checks exit criteria (all tests green, findings addressed, no regressions)
-2. Updates `exit_check` fields in `.team/state.json`
+2. Updates `exit_check` fields in `.worklog/team/state.json`
 3. If not green → create new iteration's tasks and message teammates
 4. If green → proceed to wrap-up
 
@@ -186,14 +176,14 @@ The main session resets its timeout counter on any Architect message. If 10 minu
 - No checkpoint (QA reviews after implementation, not during)
 - No Code Reviewer in Phase 3 (Validator only)
 - No Fixer — TDD Implementer fixes its own failures
-- Wrap-up: Architect consolidates staged memory to `.team/memory/consolidated.md`
+- Wrap-up: Architect consolidates staged memory to `.worklog/team/memory/consolidated.md`
 - Convergence loop still applies but is typically 1 iteration
 
 ### Tier 2 (Squad)
 - No checkpoint (QA writes scripts but no formal plan to review)
 - Full Phase 3 with Code Reviewer + Validator
 - Fixer handles all fixes
-- Wrap-up: Architect consolidates staged memory to `.team/memory/consolidated.md`
+- Wrap-up: Architect consolidates staged memory to `.worklog/team/memory/consolidated.md`
 
 ### Tier 3 (Full Team)
 - Full checkpoint in iteration 1

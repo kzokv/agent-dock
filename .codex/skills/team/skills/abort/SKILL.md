@@ -11,7 +11,7 @@ Gracefully shut down all teammates in a running team. Preserves work done so far
 
 ## Prerequisites
 
-- A team must be running (check `.team/state.json` exists)
+- A team must be running (check `.worklog/team/state.json` exists)
 
 ---
 
@@ -19,7 +19,7 @@ Gracefully shut down all teammates in a running team. Preserves work done so far
 
 ### Step 0 — Check if team is already complete
 
-Read `.team/state.json`. If `phase` is already `"complete"`:
+Read `.worklog/team/state.json`. If `phase` is already `"complete"`:
 
 1. Inform the user the team has already finished
 2. Run `tmux list-panes -a -F "#{session_name}:#{window_index}.#{pane_index}: #{pane_title}"` to identify teammate panes (titled with role names)
@@ -40,8 +40,8 @@ Display current state summary (tier, phase, iteration, teammates) and ask:
 Abort team? This will:
 - Shut down all teammates
 - Preserve all file changes on disk (uncommitted)
-- Preserve staged memory files in .team/memory/
-- Update .team/state.json to phase: "aborted"
+- Preserve staged memory files in .worklog/team/memory/
+- Update .worklog/team/state.json to phase: "aborted"
 
 Proceed? [y/n]
 ```
@@ -55,8 +55,8 @@ Send message to the Architect:
 ```
 [USER] Team abort requested by user. Please:
 1. Send shutdown messages to all active teammates
-2. Update .team/state.json with phase: "aborted"
-3. Write a brief summary of progress so far to .team/abort-summary.md
+2. Update .worklog/team/state.json with phase: "aborted"
+3. Write a brief summary of progress so far to .worklog/team/abort-summary.md
 4. Send [SHUTDOWN] when done
 ```
 
@@ -67,7 +67,7 @@ Wait for the Architect's `[SHUTDOWN]` message. If no response within 2 minutes, 
 ### Step 4 — Force cleanup (if Architect unresponsive)
 
 If the Architect did not respond:
-1. Update `.team/state.json` directly: set `phase: "aborted"`, `updated_at` to now
+1. Update `.worklog/team/state.json` directly: set `phase: "aborted"`, `updated_at` to now
 2. Inform the user that the Architect was unresponsive and teammates may still be running in tmux panes
 
 ### Step 5 — Report to user
@@ -86,6 +86,6 @@ All uncommitted changes remain on disk. You can:
 - Reset with `git checkout .` (destructive)
 
 ### Staged memory
-Memory candidates in `.team/memory/` are preserved.
+Memory candidates in `.worklog/team/memory/` are preserved.
 Run consolidation manually if needed.
 ```

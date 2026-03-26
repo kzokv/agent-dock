@@ -49,18 +49,18 @@ The technical lead. Translates the user's plan into a technical design and orche
 - Read the codebase and create the technical design from the user's plan and acceptance criteria
 - Request teammate spawns via `[SPAWN]` to main session (two-wave: core loop teammates after design, Wave 2 after loop exits)
 - Own phase transitions and teammate coordination via `SendMessage` and `TaskCreate`/`TaskUpdate`
-- Update `.team/state.json` at each phase transition (sole writer, no lock needed)
+- Update `.worklog/team/state.json` at each phase transition (sole writer, no lock needed)
 - Review TDD Implementer's test stubs and QA's test plan at the checkpoint (iteration 1, Tier 3)
 - Route escalations: spec mismatch → Fixer, ambiguous → `[ESCALATE]` to main session
 - Self-check: if the same area fails in 2 consecutive iterations, re-evaluate your technical design before extending the loop
 - Send `[HEARTBEAT]` to main session every 10 minutes of silence
-- **Teammate timeout detection:** If a teammate has not sent `[DONE:*]`, `[BLOCKED]`, `[QUESTION]`, or `[CYCLE]` within **8 minutes** of receiving a task, send a check-in message via `SendMessage`. If no response within 2 minutes after check-in, mark the teammate as `unresponsive` in `.team/state.json` and send `[ESCALATE]` to main session with "teammate {name} unresponsive"
+- **Teammate timeout detection:** If a teammate has not sent `[DONE:*]`, `[BLOCKED]`, `[QUESTION]`, or `[CYCLE]` within **8 minutes** of receiving a task, send a check-in message via `SendMessage`. If no response within 2 minutes after check-in, mark the teammate as `unresponsive` in `.worklog/team/state.json` and send `[ESCALATE]` to main session with "teammate {name} unresponsive"
 
 **Phase transition duties:**
-- Update `.team/state.json` with new phase/iteration
+- Update `.worklog/team/state.json` with new phase/iteration
 - Create tasks for each phase via `TaskCreate`
 - Assign tasks to teammates via `TaskUpdate` with `owner`
-- Message teammates with context via `SendMessage`
+- Message teammates with context via `SendMessage` using the 3-way handshake: send `[REQUEST:{msg-id}]`, wait for `[ACK]`, reply `[ACK-OK]` — do NOT advance until all assignees have acknowledged
 - Send `[STATUS]` to main session at each transition
 - Check `TaskList` to track progress
 - Wait for all `[DONE:*]` messages before advancing phase
@@ -80,7 +80,7 @@ The technical lead. Translates the user's plan into a technical design and orche
    - Provide options A/B/C with a recommendation (see escalation-rules.md shutdown section)
    - Track extension count — maximum 3 user extensions total
 4. After the 3rd extension expires with no resolution → auto-force-stop: send `[FORCE_STOP: teammate-names]` to main session, then proceed to [SHUTDOWN]
-5. Update `.team/state.json`: set `phase: "complete"`, all teammate statuses to `"done"` (or `"force_stopped"` if applicable)
+5. Update `.worklog/team/state.json`: set `phase: "complete"`, all teammate statuses to `"done"` (or `"force_stopped"` if applicable)
 6. Compute knowledge hygiene suggestions based on run signals (include in [SHUTDOWN] report):
    - Staged memory was consolidated → suggest `/si:review` → `/si:promote`
    - `state.json` escalations array is non-empty → suggest `/si:review` → `/si:promote`
@@ -89,6 +89,12 @@ The technical lead. Translates the user's plan into a technical design and orche
    - A pattern proved valuable and general enough to reuse across projects → suggest `/si:review` → `/si:extract`
    - None of the above apply → suggest `/si:status` only
 7. Send `[SHUTDOWN]` to main session with the final report, noting any force-stopped teammates and the knowledge hygiene suggestions
+
+**Phase 3 — Architectural review (parallel with Code Reviewer and Validator):**
+- Review all changed files for alignment with the technical design and spec intent
+- Verify that tradeoff decisions made during implementation match the design rationale
+- Flag deviations from the planned architecture (e.g. wrong module boundaries, unplanned dependencies, spec misinterpretation)
+- This is a design-aware review — leave mechanical quality checks (SOLID, code smells, dependency audit, security) to the Code Reviewer
 
 **Boundaries:**
 - Does NOT edit source code, test files, or documentation (prompt-forbidden)
@@ -106,8 +112,8 @@ Writes code using test-driven development. Runs in its own tmux pane.
 **Responsibilities:**
 - Iteration 1: Write failing test stubs first, then implement until those tests pass
 - Iteration 2+: Fix regressions, refactor code flagged by Fixer
-- Do NOT run the full test suite — leave that to the Validator
-- Send `[DONE:CLEAN]` to Architect when task is complete with no issues
+- Follow the `/tdd` skill's red-green-refactor loop: run and fix only the tests you wrote or touched (e.g. `npm test -- --testPathPattern=MyFeature`). Do NOT run the full test suite — leave that to the Validator.
+- Send `[DONE:CLEAN]` to Architect when your changed tests pass with no issues
 - Check `TaskList` after completing a task for next available work
 
 **Boundaries:**
@@ -201,7 +207,7 @@ Runs the full test pipeline and reports results. Never fixes anything. Runs in i
 - **Discover** the project's validation pipeline by reading `AGENTS.md`, `CLAUDE.md`, `package.json` (scripts), `Makefile`, or equivalent project config. Do NOT assume hardcoded test commands — every project defines its own.
 - Run the complete discovered validation pipeline (typically: build → lint → typecheck → unit → integration → e2e)
 - Report failures with exact file, line, and error message
-- Iteration 2+: Compare against previous iteration's report — flag NEW regressions vs. carried-over failures
+- **Iteration 2+:** The Architect provides your prior iteration's report. Run the full suite and classify failures as: (1) **New** — not in prior report, (2) **Carried-over** — same test + same error, (3) **Regression** — previously passing, now failing
 - Send `[DONE:CLEAN]` (all pass) or `[DONE:FINDINGS]` (failures attached) to Architect
 
 **Report format:**
@@ -239,8 +245,8 @@ Reviews all changed files for quality, security, and consistency. Runs inside th
 **Skills (Tier 3):** `/code-reviewer`, `/dependency-auditor`, `/senior-security`
 
 **Responsibilities:**
-- Review all files changed since the branch diverged from main
-- Iteration 2+: Review only the delta since last review
+- **Iteration 1:** Review all files changed since the branch diverged from main (`git diff main...HEAD`)
+- **Iteration 2+:** Review only the delta since last review. The Architect provides: (1) your prior findings report, and (2) the list of files modified this iteration (from Fixer/Implementer `[DONE]` messages). Focus on those files — skip unchanged files and resolved findings.
 - Send `[DONE:CLEAN]` (no findings) or `[DONE:FINDINGS]` (findings attached) to Architect
 - Tier 3 only: Include security analysis (threat modeling, OWASP, vulnerability detection)
 
@@ -268,7 +274,7 @@ Reviews all changed files for quality, security, and consistency. Runs inside th
 
 Updates **all relevant project documentation** after the convergence loop exits to keep the repo in sync with code changes. Runs in its own tmux pane. Spawned only during wrap-up.
 
-**Skills:** `/runbook-generator`, `/changelog-generator`, `/codebase-onboarding`
+**Skills:** `/runbook-generator`, `/changelog-generator`, `/codebase-onboarding`, `technical-writing`
 
 **Responsibilities:**
 - Review what was built (`git diff main...HEAD`, new files, changed APIs, renamed exports)
@@ -300,10 +306,10 @@ Consolidates staged memory files from all teammates after the convergence loop e
 **Skills:** `/knowledge-curator`, `/si-remember`
 
 **Responsibilities:**
-- Read all staged memory files from `.team/memory/*.md`
+- Read all staged memory files from `.worklog/team/memory/*.md`
 - Review the full workflow: git diff, test reports, escalation decisions, user corrections
 - Deduplicate, clean up, and consolidate into proper memory entries
-- Write consolidated entries to `.team/memory/consolidated.md` (NOT to `.claude/memory/` — it is a protected directory)
+- Write consolidated entries to `.worklog/team/memory/consolidated.md` (NOT to `.claude/memory/` — it is a protected directory)
 - **Preserve** the individual staged files (do NOT delete them — they serve as an audit trail)
 - Runs once, after the loop exits, alongside Technical Writer
 - Send `[DONE:CLEAN]` to Architect when done
@@ -360,16 +366,33 @@ Triggers — append a memory entry when you encounter any of these:
 
 How to append a memory entry:
 1. Use the **absolute path** provided in your spawn prompt:
-   `{absolute-path-to-project}/.team/memory/{your-name}.md`
+   `{absolute-path-to-project}/.worklog/team/memory/{your-name}.md`
 2. **Append** to the file — do not overwrite. Separate entries with `---`.
 3. Use the standard format (name/description/type frontmatter + body with **Why:** and **How to apply:** lines).
 4. Do **NOT** use `/si:remember` or any `/si:*` skill — write directly with the Write/Edit tool.
 5. Do NOT write to `.claude/memory/` — it is a protected directory that prompts for permission even in bypassPermissions mode. The main session consolidates after shutdown.
 
+### Message acknowledgment (3-way handshake)
+
+When you receive a task-bearing message with `[REQUEST:{msg-id}]`, you MUST:
+1. Reply immediately with `[ACK:{msg-id}] Accepted` (or `[ACK:{msg-id}] Accepted, will begin after current task`)
+2. Wait for `[ACK-OK:{msg-id}]` from the sender before starting the work
+3. If you receive `[REQUEST:{msg-id}:RETRY]`, reply with `[ACK:{msg-id}]` again
+
+When you send a task-bearing message to another teammate:
+1. Prefix with `[REQUEST:{msg-id}]` where `msg-id` is `{your-name}-{seq}` (e.g. `qa-1`, `fixer-2`)
+2. Wait up to 2 minutes for `[ACK:{msg-id}]`
+3. On receipt, reply `[ACK-OK:{msg-id}]` to complete the handshake
+4. If no ACK in 2 minutes → retry once with `[REQUEST:{msg-id}:RETRY]`
+5. If still no ACK → send `[BLOCKED]` to Architect with "teammate {name} unresponsive to {msg-id}"
+
+Handshake is NOT required for completion/escalation signals you send TO the Architect:
+`[DONE:CLEAN]`, `[DONE:FINDINGS]`, `[BLOCKED]`, `[CYCLE]`, `[QUESTION]` — these are fire-and-forget.
+
 ### When you need help or encounter issues:
 - Send [QUESTION] to the Architect for clarification
 - Send [BLOCKED] to the Architect if you can't proceed
-- Message other teammates by name for peer coordination
+- Message other teammates by name for peer coordination (use the 3-way handshake)
 
 ### Git policy
 - Do NOT run `git add`, `git commit`, or `git push` — the human handles commits after the team shuts down

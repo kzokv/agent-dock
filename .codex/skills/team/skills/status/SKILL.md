@@ -11,7 +11,7 @@ Display the current state of a running agent team without interrupting execution
 
 ## Prerequisites
 
-- A team must be running (check `.team/state.json` exists)
+- A team must be running (check `.worklog/team/state.json` exists)
 
 ---
 
@@ -19,7 +19,7 @@ Display the current state of a running agent team without interrupting execution
 
 ### Step 1 — Read state
 
-Read `.team/state.json` and extract:
+Read `.worklog/team/state.json` and extract:
 - Current tier, phase, iteration
 - Wave (1 or 2)
 - Branch name

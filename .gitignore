@@ -60,6 +60,9 @@ session_index.jsonl
 cache/**
 *.sqlite*
 
+# Ephemeral runtime state (team, debate, scope sessions)
+.worklog/
+
 # Claude Code runtime artifacts
 .claude/tasks/
 .claude/teams/

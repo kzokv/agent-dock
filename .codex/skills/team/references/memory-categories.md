@@ -48,10 +48,10 @@ All teammates (including the Architect) write memory candidates to individual st
 Any teammate who encounters something from the "Always capture" or "Capture if non-obvious" categories writes it to:
 
 ```
-.team/memory/{teammate-name}.md
+.worklog/team/memory/{teammate-name}.md
 ```
 
-Each teammate owns their own file — no locks, no coordination needed. The `.team/` directory is created at team init and is gitignored.
+Each teammate owns their own file — no locks, no coordination needed. The `.worklog/team/` directory is created at team init.
 
 ### Consolidation at wrap-up
 
@@ -61,15 +61,15 @@ Each teammate owns their own file — no locks, no coordination needed. The `.te
 | Tier 3 | **Memory Curator** (Wave 2 teammate) | After convergence loop exits, alongside Technical Writer |
 
 The consolidator:
-1. Reads all files in `.team/memory/`
+1. Reads all files in `.worklog/team/memory/`
 2. Deduplicates and cleans up entries
-3. Writes consolidated entries to `.team/memory/consolidated.md` (NOT to `.claude/memory/`)
+3. Writes consolidated entries to `.worklog/team/memory/consolidated.md` (NOT to `.claude/memory/`)
 4. **Preserves** the individual staged files (do NOT delete them — they serve as an audit trail)
 
 ### Post-shutdown consolidation
 
 After [SHUTDOWN], the main session (which runs interactively and can handle permission prompts):
-1. Reads `.team/memory/consolidated.md`
+1. Reads `.worklog/team/memory/consolidated.md`
 2. Prompts the user: "Consolidate N memory entries to `.claude/memory/`? [y/n]"
 3. On approval, writes proper memory files to `.claude/memory/` and updates `MEMORY.md` index
 4. This is a single batch approval — the user sees what's being written
