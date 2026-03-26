@@ -1,15 +1,15 @@
 ---
 name: "team"
-description: "Spawn and manage multi-agent implementation teams with tiered scaling, convergence loops, and state tracking. Use when: user wants to create an agent team, spawn agents for implementation, scale agents up/down, or evaluate task complexity for tier selection."
+description: "Multi-agent team skill v3.0.0. Dispatcher (Tier 2-3) handles state routing so Architect focuses on design decisions. Self-fix model: domain agents fix their own findings — no dedicated Fixer. Technical Writer in Wave 2 at all tiers. Use when: user wants to create an agent team, spawn agents for implementation, scale agents up/down, or evaluate task complexity for tier selection."
 metadata:
-  version: 2.2.0
+  version: 3.0.0
   category: engineering
-  updated: 2026-03-22
+  updated: 2026-03-26
 ---
 
 # Team — Multi-Agent Implementation Teams
 
-Spawn opinionated agent teams that separate **writing** from **validating** from **reviewing**. Each teammate runs in its own tmux pane via Claude Code's Agent Teams feature. Teams run in a bounded convergence loop until all tests pass and all findings are addressed.
+Spawn opinionated agent teams that separate **writing** from **validating** from **reviewing**. Domain agents self-fix their own findings. At Tier 2-3, a Dispatcher handles state routing so the Architect can focus on design. Each teammate runs in its own tmux pane via Claude Code's Agent Teams feature. Teams run in a bounded convergence loop until all tests pass and all findings are addressed.
 
 ---
 
@@ -45,10 +45,13 @@ Recognize these patterns from the user:
 
 ```
 User <-> Main Session (Team Manager) <-> Architect (persistent teammate) <-> Teammates (panes)
+                                              ↕ (Tier 2-3)
+                                         Dispatcher (state router)
 ```
 
 - **Main Session = Team Manager**: Spawns the Architect, relays escalations to the user, handles spawn requests from the Architect (only the main session can spawn teammates). Filters teammate messages — status updates get summarized, escalations get surfaced with context.
-- **Architect = Persistent Teammate**: Runs in its own tmux pane. Creates the technical design, orchestrates the convergence loop, coordinates teammates via `SendMessage` and `TaskCreate`/`TaskUpdate`. Does NOT edit files (prompt-forbidden). Reports to the main session.
+- **Architect = Persistent Teammate**: Runs in its own tmux pane. Creates the technical design, makes decisions (finding triage, extend/redesign/escalate, exit checks). At Tier 1, also manages state and routing. At Tier 2-3, focuses on design decisions while the Dispatcher handles state. Does NOT edit files (prompt-forbidden). Reports to the main session.
+- **Dispatcher = State Router (Tier 2-3 only)**: Lightweight Sonnet agent that polls TaskList every 30s, advances phases, creates tasks, sends `[GO]` signals, and wakes the Architect for decisions. Never thinks deeply — only routes. Eliminates the stuck-flow bottleneck.
 - **Teammates = tmux panes**: Each teammate runs in its own tmux pane in the same worktree. They work on assigned tasks, communicate via `SendMessage` with message prefix conventions, and track progress via `TaskUpdate`.
 
 ### Pre-team phase (human + Claude)
@@ -75,18 +78,19 @@ Uses Claude Code's **Agent Teams** feature (`TeamCreate` + `TaskCreate` + `SendM
 1. Main session creates the team and spawns the Architect only
 2. Architect creates the technical design, then requests teammates via `[SPAWN]` message
 3. Main session spawns requested teammates
-4. Architect orchestrates the convergence loop via `SendMessage` + `TaskCreate`/`TaskUpdate`
-5. Main session relays escalations to the user and handles spawn/shutdown requests
+4. At Tier 1: Architect orchestrates the convergence loop directly
+5. At Tier 2-3: Dispatcher manages state/routing, Architect makes design decisions
+6. Main session relays escalations to the user and handles spawn/shutdown requests
 
 See `references/convergence-loop.md` for the full convergence loop flow.
 
 ### Tiers
 
-| Tier | Name | When | Teammates (tmux panes) | Est. Cost |
-|------|------|------|------------------------|-----------|
-| 1 | Solo | 1-2 files, single layer, low risk | 4: Architect, Implementer, QA, Validator | ~$2-5 |
-| 2 | Squad | 3-8 files, 2 layers, moderate risk | 6: + Fixer, Code Reviewer | ~$5-15 |
-| 3 | Full Team | 9+ files, 3+ layers, high risk | 6 during loop + 2 at wrap-up: + Technical Writer, Memory Curator | ~$15-40 |
+| Tier | Name | When | Wave 1 Teammates | Wave 2 | Est. Cost |
+|------|------|------|-------------------|--------|-----------|
+| 1 | Solo | 1-2 files, single layer, low risk | 4: Architect, Implementer, QA, Validator | +1 conditional: Technical Writer | ~$2-5 |
+| 2 | Squad | 3-8 files, 2 layers, moderate risk | 6: + Dispatcher, Fullstack Implementer, Code Reviewer | +1: Technical Writer | ~$5-15 |
+| 3 | Full Team | 9+ files, 3+ layers, high risk | 7: + Frontend Impl, Backend Impl, QA (Opus) | +1: Technical Writer | ~$15-40 |
 
 See `references/tier-heuristics.md` for selection criteria.
 
@@ -94,10 +98,16 @@ See `references/tier-heuristics.md` for selection criteria.
 
 | Wave | When | Teammates |
 |------|------|-----------|
-| Wave 1 | After Architect creates technical design | Implementer, QA, Validator, Fixer*, Code Reviewer* |
-| Wave 2 | After convergence loop exits (Tier 3 only) | Technical Writer, Memory Curator |
+| Wave 1 | After Architect creates technical design | Core loop teammates (varies by tier) |
+| Wave 2 | After convergence loop exits | Technical Writer (conditional at Tier 1, always at Tier 2-3) |
 
-*Fixer and Code Reviewer only at Tier 2-3.
+### Self-fix model (replaces dedicated Fixer)
+
+Domain agents self-fix their own findings after validation:
+- **Implementer(s)** fix implementation code issues
+- **Senior QA** fixes test script, fixture, and automation issues
+- After self-fix, each agent runs the **full test suite** before reporting done
+- **Architect triages findings** from Validator/Code Reviewer → tags each to the correct domain owner
 
 ### State management
 
@@ -107,27 +117,25 @@ See `references/tier-heuristics.md` for selection criteria.
 | Work items | `TaskCreate` / `TaskUpdate` / `TaskList` |
 | Coordination | Hybrid: `TaskUpdate` (durable) + `SendMessage` (hints). See `references/message-protocol.md` |
 | Loop control | `.worklog/team/state.json` (phase, iteration, exit checks, tier, escalation log) |
-
-The Architect is the sole writer to `.worklog/team/state.json` — no lock protocol needed.
+| State writer | Architect (Tier 1) or Dispatcher (Tier 2-3) — sole writer, no lock needed |
 
 ### Message protocol
 
 All inter-agent communication uses a **hybrid model** with two channels:
 
-- **Durable channel** (TaskUpdate/TaskCreate/TaskList) — for critical-path signals (`[DONE]`, `[BLOCKED]`, `[GO]`, task assignments). These cannot be lost.
-- **Hint channel** (SendMessage) — non-authoritative notifications and conversational messages. Loss is tolerable; the Architect's 60s polling loop catches anything dropped.
+- **Durable channel** (TaskUpdate/TaskCreate/TaskList) — for critical-path signals (`[DONE]`, `[BLOCKED]`, `[GO]`, task assignments). These cannot be lost. **MANDATORY for every status change.**
+- **Hint channel** (SendMessage) — non-authoritative notifications and conversational messages. Loss is tolerable; the polling loop catches anything dropped.
 
-See `references/message-protocol.md` for the full protocol specification, including message prefix conventions, the Architect polling loop, and teammate timeout detection.
+See `references/message-protocol.md` for the full protocol specification, including the Dispatcher polling loop, Architect polling (Tier 1), and teammate timeout detection.
 
 ### Memory staging
 
-All teammates (including Architect) write memory candidates to `.worklog/team/memory/{teammate-name}.md` during execution. No locks needed — each teammate owns their own file.
+All teammates (including Architect and Dispatcher) write memory candidates to `.worklog/team/memory/{teammate-name}.md` during execution. No locks needed — each teammate owns their own file.
 
 **Why `.worklog/team/memory/` and not `.claude/memory/`?** The `.claude/` directory is protected by Claude Code — `bypassPermissions` mode does NOT bypass write prompts for `.claude/memory/`. Only `.claude/commands/`, `.claude/agents/`, and `.claude/skills/` are exempt. Writing to `.claude/memory/` causes teammates to stall on interactive permission dialogs.
 
 Consolidation happens once at wrap-up:
-- **Tier 1-2**: Architect writes consolidated entries to `.worklog/team/memory/consolidated.md`. Main session prompts user to approve batch write to `.claude/memory/` after [SHUTDOWN].
-- **Tier 3**: Memory Curator (Wave 2) writes consolidated entries to `.worklog/team/memory/consolidated.md`. Main session prompts user to approve batch write to `.claude/memory/` after [SHUTDOWN].
+- **All tiers**: Architect writes consolidated entries to `.worklog/team/memory/consolidated.md`. Main session prompts user to approve batch write to `.claude/memory/` after [SHUTDOWN].
 
 See `references/memory-categories.md` for what to capture.
 
@@ -149,9 +157,9 @@ When the user invokes `/team`:
 
 ## Key References
 
-- `references/role-definitions.md` — All 8 roles (Main Session + 7 team roles) with per-tier variants
-- `references/message-protocol.md` — Hybrid message protocol (durable + hint channels, polling loop)
-- `references/convergence-loop.md` — Phases, exit criteria, Architect self-check
+- `references/role-definitions.md` — All 9 roles (Main Session + 8 team roles) with per-tier variants
+- `references/message-protocol.md` — Hybrid message protocol (durable + hint channels, Dispatcher polling loop)
+- `references/convergence-loop.md` — Phases, self-fix model, finding triage, exit criteria
 - `references/tier-heuristics.md` — Tier selection criteria
 - `references/escalation-rules.md` — When Architect decides vs. escalates to human
 - `references/memory-categories.md` — What to capture in memory, what to skip

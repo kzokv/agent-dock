@@ -1,6 +1,6 @@
 ---
-name: "team:scale-up"
-description: "Add teammates to a running team by upgrading to a higher tier"
+name: "team-v2:scale-up"
+description: "Add teammates to a running v2.2.0 team by upgrading to a higher tier"
 ---
 
 # /team scale-up
@@ -36,11 +36,11 @@ Compare current roster against the target tier's roster (from `references/role-d
 
 | From → To | New teammates added |
 |-----------|---------------------|
-| Tier 1 → 2 | Dispatcher (Sonnet), Code Reviewer (Sonnet). Implementer becomes Fullstack Implementer (same agent, expanded scope). |
-| Tier 1 → 3 | Dispatcher (Sonnet), Code Reviewer (Sonnet), Frontend Implementer (Opus), Backend Implementer (Opus). Implementer is retired; QA upgrades to Opus. |
-| Tier 2 → 3 | Frontend Implementer (Opus), Backend Implementer (Opus). Fullstack Implementer is retired; QA upgrades to Opus. |
+| Tier 1 → 2 | Fixer (Sonnet), Code Reviewer (Sonnet) |
+| Tier 1 → 3 | Fixer, Code Reviewer, Technical Writer, Memory Curator |
+| Tier 2 → 3 | Technical Writer (Sonnet), Memory Curator (Sonnet) |
 
-Note: When scaling from Tier 1→2, the existing Implementer continues as Fullstack Implementer (no respawn needed). When scaling to Tier 3, domain split requires new agents.
+Note: QA runs on Opus at all tiers — no model swap needed during scale-up.
 
 ### Step 4 — Relay spawn request to Architect
 
@@ -58,7 +58,7 @@ The Architect sends `[SPAWN]` to the main session with the new teammate roster. 
 
 ### Step 5 — Update state
 
-The Architect (Tier 1) or Dispatcher (Tier 2-3) updates `.worklog/team/state.json` with the new tier.
+The Architect updates `.worklog/team/state.json` with the new tier.
 
 ### Step 6 — Confirm
 

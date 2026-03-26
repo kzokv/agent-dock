@@ -1,6 +1,6 @@
 ---
-name: "team:scale-down"
-description: "Remove teammates from a running team by downgrading to a lower tier"
+name: "team-v2:scale-down"
+description: "Remove teammates from a running v2.2.0 team by downgrading to a lower tier"
 ---
 
 # /team scale-down
@@ -29,7 +29,7 @@ Read `.worklog/team/state.json` to determine:
 
 Do NOT scale down if:
 - A teammate that would be removed is actively working on a task — wait for it to complete or ask the user to confirm termination
-- The team is in Phase 4 (Self-Fix) — domain agents may be mid-repair
+- The team is in Phase 4 (Fix) — the Fixer may be mid-repair
 
 If blocked, report why and ask the user how to proceed.
 
@@ -42,11 +42,11 @@ Otherwise, scale down by one tier (Tier 3 → 2, Tier 2 → 1).
 
 | From → To | Teammates removed / not spawned |
 |-----------|--------------------------------|
-| Tier 3 → 2 | Frontend Implementer, Backend Implementer retired; Fullstack Implementer spawned. QA downgrades to Sonnet (or existing QA continues). |
-| Tier 3 → 1 | Frontend Implementer, Backend Implementer, Dispatcher, Code Reviewer retired. Single Implementer spawned. QA downgrades to Sonnet. |
-| Tier 2 → 1 | Dispatcher, Code Reviewer retired. Fullstack Implementer continues as Implementer (same agent, narrower scope). |
+| Tier 3 → 2 | Technical Writer, Memory Curator — if not yet spawned (Wave 2), they are simply skipped; if already running, they are shut down |
+| Tier 3 → 1 | Technical Writer, Memory Curator (skipped/shut down), Fixer, Code Reviewer (shut down) |
+| Tier 2 → 1 | Fixer (Sonnet), Code Reviewer (Sonnet) |
 
-Note: Technical Writer (Wave 2) is not affected by scale-down — it hasn't been spawned yet during the convergence loop.
+Note: QA runs on Opus at all tiers — no model swap needed during scale-down.
 
 ### Step 5 — Relay to Architect
 
@@ -59,14 +59,14 @@ Send the scale-down information to the Architect via `[USER]`:
 The Architect:
 1. Sends shutdown messages to removed teammates via `SendMessage`
 2. Reassigns any open tasks from removed teammates
-3. Adjusts the convergence loop (e.g., at Tier 1: skip Code Review in Phase 3, Architect manages state directly)
+3. Adjusts the convergence loop (e.g., at Tier 1: skip Code Review in Phase 3, Implementer fixes own failures)
 4. Updates `.worklog/team/state.json` with the new tier
 
 ### Step 6 — Confirm
 
 Report to the user:
 ```
-Scaled down: Tier N �� Tier M
+Scaled down: Tier N → Tier M
 Removed teammates: [list]
 Workflow adjusted.
 ```

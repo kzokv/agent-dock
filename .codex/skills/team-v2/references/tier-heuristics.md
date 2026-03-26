@@ -61,11 +61,11 @@ Always wait for user approval before spawning.
 
 Approximate cost per team run, assuming Anthropic API pricing. Estimates assume 1-2 iterations for Tier 1, 2-3 for Tier 2, 2-4 for Tier 3.
 
-| Tier | Wave 1 | Wave 2 | Opus agents | Sonnet agents | Est. cost range |
-|------|--------|--------|-------------|---------------|-----------------|
-| 1 (Solo) | 4 | +1 (conditional) | 2 (Architect, Implementer) | 2 (QA, Validator) + conditional 1 (Writer) | **~$2-5** |
-| 2 (Squad) | 6 | +1 | 2 (Architect, Fullstack Implementer) | 4 (Dispatcher, QA, Validator, Reviewer) + 1 (Writer) | **~$5-15** |
-| 3 (Full Team) | 7 | +1 | 4 (Architect, Frontend Impl, Backend Impl, QA) | 3 (Dispatcher, Validator, Reviewer) + 1 (Writer) | **~$15-40** |
+| Tier | Teammates | Opus agents | Sonnet agents | Est. cost range |
+|------|-----------|-------------|---------------|-----------------|
+| 1 (Solo) | 4 | 2 (Architect, Implementer) | 2 (QA, Validator) | **~$2-5** |
+| 2 (Squad) | 6 | 3 (Architect, Implementer, QA) | 3 (Fixer, Validator, Reviewer) | **~$5-15** |
+| 3 (Full Team) | 8 | 3 (Architect, Implementer, QA) | 5 (Fixer, Validator, Reviewer, Writer, Curator) | **~$15-40** |
 
 **Cost multipliers:**
 - Each additional iteration adds ~30-50% of base cost

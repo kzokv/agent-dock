@@ -1,6 +1,6 @@
 ---
-name: "team:status"
-description: "Show current state of a running agent team"
+name: "team-v2:status"
+description: "Show current state of a running v2.2.0 agent team"
 ---
 
 # /team status
@@ -60,12 +60,11 @@ Pull the last 5 entries from `state.json`'s `phase_history` array to show recent
 - No regressions: [yes/no]
 
 ### Teammates
-| Name | Role | Model | Status | Last Activity |
-|------|------|-------|--------|---------------|
-| architect | Architect | opus | active | 2 min ago |
-| dispatcher | Dispatcher | sonnet | active | 10s ago |
-| fullstack-implementer | Fullstack Impl | opus | active | 30s ago |
-| ... | ... | ... | ... | ... |
+| Name | Model | Status | Last Activity |
+|------|-------|--------|---------------|
+| architect | opus | active | 2 min ago |
+| tdd-implementer | opus | active | 30s ago |
+| ... | ... | ... | ... |
 
 ### Tasks
 - [N] completed, [M] in progress, [K] pending

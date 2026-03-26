@@ -36,15 +36,15 @@ The Architect does NOT communicate with the user directly. All escalations go th
 When Senior QA's tests fail due to an implementation bug (not a test bug):
 
 1. **QA diagnoses:** Is this a test bug or an implementation bug?
-2. **If implementation bug, matches spec:** QA sends `[DONE:FINDINGS]` to Architect → Architect triages finding to the relevant Implementer
+2. **If implementation bug, matches spec:** QA sends `[DONE:FINDINGS]` to Architect → Architect routes findings to Fixer
 3. **If ambiguous (spec unclear):** QA sends `[QUESTION]` to Architect → Architect sends `[ESCALATE]` to main session
 4. **QA never fixes implementation code** — QA's job is to detect and classify, not to fix
 
 ---
 
-## Domain agent cycle detection path
+## Fixer escalation path
 
-When any domain agent (Implementer or QA) encounters repeat failures during self-fix:
+When the Fixer encounters cycle patterns:
 
 1. **Same file fixed twice:** Send `[CYCLE]` to Architect (informational)
 2. **Same test failed 2+ consecutive iterations:** STOP — send `[CYCLE]` to Architect with attempted fixes
@@ -120,7 +120,7 @@ Waiting for your decision.
 
 ## Teammate unresponsive escalation
 
-When the Architect (Tier 1) or Dispatcher (Tier 2-3) detects a teammate has not responded within the timeout window (8 min + 2 min grace after check-in):
+When the Architect detects a teammate has not responded within the timeout window (8 min + 2 min grace after check-in):
 
 1. Architect marks teammate as `unresponsive` in `.worklog/team/state.json`
 2. Architect sends `[ESCALATE]` to main session:

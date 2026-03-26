@@ -1,6 +1,6 @@
 ---
-name: "team:spawn"
-description: "Spawn an agent team at a recommended or specified tier"
+name: "team-v2:spawn"
+description: "Spawn a v2.2.0 agent team (Architect-orchestrated, Fixer at Tier 2-3, Memory Curator at Tier 3)"
 ---
 
 # /team [tier-N]
@@ -65,8 +65,8 @@ Before spawning, display the estimated cost from `references/tier-heuristics.md`
 Estimated cost: ~$X-Y (Tier N, assuming M iterations)
 
 Cost factors:
-- Opus agents: N (Architect, Implementer(s), QA at Tier 3)
-- Sonnet agents: M (Dispatcher*, QA*, Validator, Reviewer*, Writer*)
+- Opus agents: N (Architect, Implementer, QA)
+- Sonnet agents: M (Validator, Fixer*, Reviewer*, Writer*, Curator*)
 - Each additional iteration adds ~30-50% of base cost
 
 Proceed? [y/n]
@@ -82,7 +82,7 @@ Wait for user confirmation.
    - Selected tier
    - `iteration: 1`, `phase: "init"`
    - `branch`: output of `git branch --show-current`
-   - `skill_version: "3.0.0"`
+   - `skill_version: "2.2.0"`
    - `teammates`: empty object (populated by Architect as teammates are spawned)
 3. Create `.worklog/team/memory/` subdirectory if it doesn't exist
 
@@ -113,7 +113,7 @@ Agent({
    - `references/escalation-rules.md` — read for decision boundaries
    - `references/memory-categories.md` — read for memory staging guidance
 9. Instructions to read `AGENTS.md` and/or `CLAUDE.md` in the target project for project-specific conventions and test commands
-10. **Absolute memory staging path** — include the resolved absolute path to the project's `.worklog/team/memory/` directory:
+10. **Absolute memory staging path** — include the resolved absolute path to the project's `.worklog/team/memory/` directory. This prevents CWD-relative path resolution errors when teammates write staged memory files:
     ```
     Memory staging path: {absolute-path-to-project}/.worklog/team/memory/
     Write staged memory files to: {absolute-path-to-project}/.worklog/team/memory/{teammate-name}.md
@@ -122,9 +122,6 @@ Agent({
     ```
     **Path resolution for worktrees:** `git rev-parse --show-toplevel` returns the worktree root, NOT the main repo. Use the worktree root directly.
 11. **Teammate permission mode** — spawn ALL teammates (including the Architect) with `mode: "bypassPermissions"`. Teammates run in tmux panes as separate Claude Code processes. The `mode: "auto"` setting does NOT fully bypass file-creation permission prompts, causing teammates to stall on interactive permission dialogs mid-run. `bypassPermissions` ensures teammates can write memory staging files, test files, and implementation code without prompts.
-12. **Protocol enforcement (CRITICAL):**
-    - At Tier 1: Architect MUST use `TaskCreate` for every assignment, `TaskUpdate` for every status change, and update `state.json` at every phase boundary. These are gates, not guidance.
-    - At Tier 2-3: Instruct the Architect to include a Dispatcher in its `[SPAWN]` request. The Dispatcher handles state/routing.
 
 ### Step 6 — Enter relay loop
 
@@ -156,13 +153,9 @@ When the Architect sends a `[SPAWN]` message, it includes a structured payload:
 ```
 [SPAWN]
 teammates:
-  - name: "dispatcher"
-    model: "sonnet"
-    role: "Dispatcher"
-    reason: "Wave 1 — state routing (Tier 2-3)"
-  - name: "fullstack-implementer"
+  - name: "tdd-implementer"
     model: "opus"
-    role: "Fullstack Implementer"
+    role: "TDD Implementer"
     reason: "Wave 1 — core loop"
   - name: "senior-qa"
     model: "sonnet"
@@ -171,10 +164,6 @@ teammates:
   - name: "validator"
     model: "sonnet"
     role: "Validator"
-    reason: "Wave 1 — core loop"
-  - name: "code-reviewer"
-    model: "sonnet"
-    role: "Code Reviewer"
     reason: "Wave 1 — core loop"
 ```
 
@@ -185,15 +174,14 @@ The main session:
    - The task description and acceptance criteria
    - The Architect's technical design (included in the [SPAWN] payload or retrieved from a shared location)
    - The team name
-   - The common teammate instructions (including message prefix convention, MANDATORY TaskUpdate protocol, and memory staging)
+   - The common teammate instructions (including message prefix convention and memory staging)
    - File paths to read on-demand: `references/convergence-loop.md` (their phases), `references/escalation-rules.md`
-   - **Absolute memory staging path** (same value passed to the Architect):
+   - **Absolute memory staging path** (same value passed to the Architect — prevents CWD-relative path errors):
      ```
      Write your staged memory file to: {absolute-path-to-project}/.worklog/team/memory/{your-name}.md
      Use this exact absolute path — never relative paths.
      Do NOT write to .claude/memory/ — it is protected and will prompt for permission.
      ```
-   - **For Implementers:** Bake `/tdd` workflow (red-green-refactor loop) + domain skill patterns into the prompt. Do not rely on runtime skill invocation.
 3. Confirms back to Architect: `Spawned: [list of teammate names]. All in tmux panes.`
 
 ### Handling [FORCE_STOP]
@@ -234,35 +222,35 @@ The Architect sends `[SPAWN]` requests in two waves:
 
 | Wave | When | Teammates |
 |------|------|-----------|
-| Wave 1 | After Architect creates technical design | Core loop teammates (varies by tier) |
-| Wave 2 | After convergence loop exits | Technical Writer (conditional at Tier 1, always at Tier 2-3) |
+| Wave 1 | After Architect creates technical design | Implementer, QA, Validator, Fixer*, Code Reviewer* |
+| Wave 2 | After convergence loop exits (Tier 3 only) | Technical Writer, Memory Curator |
+
+*Fixer and Code Reviewer only at Tier 2-3.
 
 ---
 
 ## Tier → Teammate mapping
 
-### Tier 1 (Solo) — Wave 1: 4, Wave 2: conditional +1
+### Tier 1 (Solo) — 4 teammates total
 - Architect (Opus) — `name: "architect"` — spawned by main session
-- Implementer (Opus) — `name: "implementer"` — Wave 1
-- Senior QA (Sonnet) — `name: "senior-qa"` — Wave 1
-- Validator (Sonnet) — `name: "validator"` — Wave 1
-- Technical Writer (Sonnet) — `name: "technical-writer"` — Wave 2, conditional
-
-### Tier 2 (Squad) — Wave 1: 6, Wave 2: +1 = 7
-- Architect (Opus) — `name: "architect"` — spawned by main session
-- Dispatcher (Sonnet) — `name: "dispatcher"` — Wave 1
-- Fullstack Implementer (Opus) — `name: "fullstack-implementer"` — Wave 1
-- Senior QA (Sonnet) — `name: "senior-qa"` — Wave 1
-- Validator (Sonnet) — `name: "validator"` — Wave 1
-- Code Reviewer (Sonnet) — `name: "code-reviewer"` — Wave 1
-- Technical Writer (Sonnet) — `name: "technical-writer"` — Wave 2
-
-### Tier 3 (Full Team) — Wave 1: 7, Wave 2: +1 = 8
-- Architect (Opus) — `name: "architect"` — spawned by main session
-- Dispatcher (Sonnet) — `name: "dispatcher"` — Wave 1
-- Frontend Implementer (Opus) — `name: "frontend-implementer"` — Wave 1
-- Backend Implementer (Opus) — `name: "backend-implementer"` — Wave 1
+- TDD Implementer (Opus) — `name: "tdd-implementer"` — Wave 1
 - Senior QA (Opus) — `name: "senior-qa"` — Wave 1
 - Validator (Sonnet) — `name: "validator"` — Wave 1
+
+### Tier 2 (Squad) — 6 teammates total
+- Architect (Opus) — `name: "architect"` — spawned by main session
+- TDD Implementer (Opus) — `name: "tdd-implementer"` — Wave 1
+- Senior QA (Opus) — `name: "senior-qa"` — Wave 1
+- Fixer (Sonnet) — `name: "fixer"` — Wave 1
+- Validator (Sonnet) — `name: "validator"` — Wave 1
+- Code Reviewer (Sonnet) — `name: "code-reviewer"` — Wave 1
+
+### Tier 3 (Full Team) — 8 teammates total
+- Architect (Opus) — `name: "architect"` — spawned by main session
+- TDD Implementer (Opus) — `name: "tdd-implementer"` — Wave 1
+- Senior QA (Opus) — `name: "senior-qa"` — Wave 1
+- Fixer (Sonnet) — `name: "fixer"` — Wave 1
+- Validator (Sonnet) — `name: "validator"` — Wave 1
 - Code Reviewer (Sonnet) — `name: "code-reviewer"` — Wave 1
 - Technical Writer (Sonnet) — `name: "technical-writer"` — Wave 2
+- Memory Curator (Sonnet) — `name: "memory-curator"` — Wave 2

@@ -39,7 +39,7 @@ What to capture in memory during team execution, and what to skip.
 
 ## Memory staging model
 
-All teammates (including the Architect and Dispatcher) write memory candidates to individual staged files during execution. No teammate modifies `MEMORY.md` directly.
+All teammates (including the Architect) write memory candidates to individual staged files during execution. No teammate modifies `MEMORY.md` directly.
 
 **IMPORTANT:** Do NOT write to `.claude/memory/` — it is a protected directory in Claude Code. `bypassPermissions` mode does NOT bypass write prompts for `.claude/memory/`. Only `.claude/commands/`, `.claude/agents/`, and `.claude/skills/` are exempt. Writing to `.claude/memory/` causes teammates to stall on interactive permission dialogs.
 
@@ -57,9 +57,10 @@ Each teammate owns their own file — no locks, no coordination needed. The `.wo
 
 | Tier | Consolidator | When |
 |------|-------------|------|
-| All tiers | **Architect** | After convergence loop exits |
+| Tier 1-2 | **Architect** | After convergence loop exits |
+| Tier 3 | **Memory Curator** (Wave 2 teammate) | After convergence loop exits, alongside Technical Writer |
 
-The Architect:
+The consolidator:
 1. Reads all files in `.worklog/team/memory/`
 2. Deduplicates and cleans up entries
 3. Writes consolidated entries to `.worklog/team/memory/consolidated.md` (NOT to `.claude/memory/`)
