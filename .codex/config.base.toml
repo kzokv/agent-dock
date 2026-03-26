@@ -82,6 +82,11 @@ command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
 startup_timeout_sec = 30
 
+[mcp_servers."chrome-devtools"]
+command = "npx"
+args = ["chrome-devtools-mcp@latest", "--browserUrl", "http://127.0.0.1:9222"]
+startup_timeout_sec = 30
+
 [notice.model_migrations]
 "gpt-5.1-codex-mini" = "gpt-5.4"
 "gpt-5.3-codex" = "gpt-5.4"

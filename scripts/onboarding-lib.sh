@@ -794,7 +794,7 @@ ensure_user_mcp_servers() {
     credentials_path=""
   fi
 
-  python3 -c "
+  python3 - "$config_base_toml" "$claude_json_target" "${credentials_path:-}" <<'PY'
 import json, re, sys, os
 
 toml_path = sys.argv[1]
@@ -816,8 +816,8 @@ if creds_path:
         pass
 
 servers = {}
-for m in re.finditer(r'^\[mcp_servers\.(\S+)\]\s*\n((?:(?!\n\[).)*)', text, re.MULTILINE | re.DOTALL):
-    name = m.group(1)
+for m in re.finditer(r'^\[mcp_servers\.("[^"]+"|[^\]\s]+)\]\s*\n((?:(?!\n\[).)*)', text, re.MULTILINE | re.DOTALL):
+    name = m.group(1).strip('"')
     block = m.group(2)
     server = {}
     for line in block.strip().splitlines():
@@ -851,7 +851,7 @@ claude_json.setdefault('mcpServers', {}).update(servers)
 with open(out_path, 'w') as f:
     json.dump(claude_json, f, indent=2)
     f.write('\n')
-" "$config_base_toml" "$claude_json_target" "${credentials_path:-}"
+PY
 }
 
 ensure_claude_memory_symlink() {
