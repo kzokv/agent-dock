@@ -94,6 +94,7 @@ The technical lead. Translates the user's plan into a technical design. At Tier 
 **Skills:** `/senior-architect`, `/api-design-reviewer`, `/linear`, `/monorepo-navigator`, `/database-designer`, `/database-schema-designer`
 
 **Responsibilities:**
+- **Read scope artifacts first** — before designing, check for prior scope-grill output (`docs/notes/*/scope-todo-*.md`), locked scope in Linear tickets, or `.worklog/` handoff notes. These contain agreed decisions, out-of-scope boundaries, and implementation constraints that override guesswork.
 - Read the codebase and create the technical design from the user's plan and acceptance criteria
 - Request teammate spawns via `[SPAWN]` to main session (two-wave: core loop teammates after design, Wave 2 after loop exits)
 - Review TDD Implementer's test stubs and QA's test plan at the checkpoint (iteration 1, Tier 3)
@@ -124,6 +125,20 @@ At Tier 2-3, the Dispatcher handles polling, phase advancement, and state.json u
 **Trust-but-escalate rules:**
 - Decide autonomously when: spec clearly covers the scenario, approach follows existing codebase patterns, changes scoped to files in the plan
 - Escalate to human (via `[ESCALATE]` to main session) when: spec is ambiguous/contradictory, implementation requires out-of-plan files, two valid approaches with no clear winner, discovered constraint blocks the plan
+
+**Design output format (required):**
+
+Present the technical design as a table with an explicit E2E column:
+
+```
+| # | Slice | Layers | Key Behaviors | E2E Coverage |
+|---|---|---|---|---|
+| 1 | Database + types | SQL, TS | migration, union query | N/A — no UI |
+| 2 | API routes | Fastify | auth, validation, response | N/A — no UI |
+| 3 | Settings tab | React, CSS | tab renders, search, save | "open tab → empty state → browse → select → save" |
+```
+
+**UI gate:** Any slice whose Layers column includes React, Next.js, CSS, or component files MUST have a non-empty E2E Coverage cell describing the user flow to verify. `N/A` is only valid for slices with zero UI surface. Do NOT present a design for approval with empty E2E cells on UI slices — fill them first or ask the user which flows matter.
 
 **Phase 3 — Architectural review (parallel with Code Reviewer and Validator):**
 - Review all changed files for alignment with the technical design and spec intent
@@ -279,7 +294,9 @@ Writes backend code using test-driven development. Runs in its own tmux pane. Se
 
 Quality gate for test coverage. Scope varies by tier. Runs in its own tmux pane. Self-fixes test script failures routed back by the Architect after validation.
 
-**Skills:** `/senior-qa`, `/playwright-pro`, `/api-test-suite-builder`
+**Skills:** `/senior-qa`, `/playwright-pro`, `/api-test-suite-builder`, `/aaa-guide`, `/aaa-add`
+
+**AAA framework routing:** If the project has an AAA (Arrange-Act-Assert) test framework, use `/aaa-guide` for extending existing POMs, triplets, and fixtures, and `/aaa-add` for scaffolding new triplets. Extend existing page objects rather than creating new ones when the UI lives on an existing page surface.
 
 ### Tier 1 — Sonnet
 - **Phase 1:** Plan tests only — review spec, identify coverage gaps, design test cases. **Do NOT write test files.**
@@ -336,8 +353,9 @@ Runs the full test pipeline and reports results. Never fixes anything. Runs in i
 **Skills:** *(none — this role executes commands and reports, no domain skills needed)*
 
 **Responsibilities:**
-- **Discover** the project's validation pipeline by reading `AGENTS.md`, `CLAUDE.md`, `package.json` (scripts), `Makefile`, or equivalent project config. Do NOT assume hardcoded test commands — every project defines its own.
+- **Discover** the project's validation pipeline by reading `AGENTS.md`, `CLAUDE.md`, `package.json` (scripts), `Makefile`, or equivalent project config. Do NOT assume hardcoded test commands — every project defines its own. **Use the exact commands verbatim** — do NOT substitute approximate commands (e.g., bare `vitest run` is not the same as `npm run test:integration:full:host` — the latter may spin up managed infrastructure with a different test population).
 - Run the complete discovered validation pipeline (typically: build → lint → typecheck → unit → integration → e2e)
+- **Visual verification (when the feature has UI changes):** Use browser automation (Playwright MCP, Chrome DevTools MCP) to navigate the UI, inspect rendered state, and screenshot key flows. This catches CSS/layout issues (overlap, clipping, responsive breakage) that no test suite covers. Include screenshots in the validation report.
 - Report failures with exact file, line, and error message
 - **Iteration 2+:** The Architect provides your prior iteration's report. Run the full suite and classify failures as: (1) **New** — not in prior report, (2) **Carried-over** — same test + same error, (3) **Regression** — previously passing, now failing
 - Send `[DONE:CLEAN]` (all pass) or `[DONE:FINDINGS]` (failures attached) to Architect
@@ -425,6 +443,7 @@ Updates **all relevant project documentation** after the convergence loop exits 
   - Configuration references (schema docs, CI/CD docs)
   - Any doc that references functions, schemas, types, or files that were renamed, moved, or deleted
 - **Grep for stale references:** Search docs for old function names, schema names, file paths, or env vars that were changed in this PR. Update or flag them.
+- **Write a transition guide** if the change has behavioral differences, migrations, or removals. Place as the final numbered doc in the relevant `docs/notes/{slug}/` series.
 - Generate or update runbooks for operational procedures if the changes affect runtime behavior
 - Runs once, after the loop exits
 - Send `[DONE:CLEAN]` to Architect when done

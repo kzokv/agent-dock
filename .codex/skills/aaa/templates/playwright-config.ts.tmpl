@@ -1,0 +1,97 @@
+// {{PROJECT_PREFIX}}/test-framework/src/config/createPlaywrightConfig.ts
+// Shared Playwright config factory — eliminates ~95% duplication between configs.
+
+import { defineConfig, type PlaywrightTestConfig } from "@playwright/test";
+
+type WebServerMode = "full" | "api-only";
+
+interface PlaywrightConfigOptions {
+  /** Test directory relative to the config file */
+  testDir: string;
+  /** Which servers to start: "full" (web+api) or "api-only" */
+  webServers: WebServerMode;
+  /** Base URL for browser tests (web app) */
+  webBaseUrl?: string;
+  /** Base URL for API requests */
+  apiBaseUrl: string;
+  /** Timeout per test in ms (default: 30000) */
+  timeout?: number;
+  /** Number of workers (default: 2) */
+  workers?: number;
+  /** Additional Playwright config overrides */
+  overrides?: Partial<PlaywrightTestConfig>;
+}
+
+export function createPlaywrightConfig(options: PlaywrightConfigOptions): PlaywrightTestConfig {
+  const {
+    testDir,
+    webServers,
+    webBaseUrl,
+    apiBaseUrl,
+    timeout = 30_000,
+    workers = 2,
+    overrides = {},
+  } = options;
+
+  const webServerConfigs = [];
+
+  // API server — always started
+  webServerConfigs.push({
+    command: "{{apiStartCommand}}",
+    url: `${apiBaseUrl}/health/live`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 60_000,
+  });
+
+  // Web server — only for "full" mode
+  if (webServers === "full" && webBaseUrl) {
+    webServerConfigs.push({
+      command: "{{webStartCommand}}",
+      url: webBaseUrl,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    });
+  }
+
+  return defineConfig({
+    testDir,
+    timeout,
+    workers,
+    fullyParallel: false, // Parallel-by-file only, no same-file fan-out
+    retries: process.env.CI ? 1 : 0,
+    reporter: [
+      ["html", { open: "never" }],
+      ["list"],
+    ],
+    use: {
+      baseURL: webBaseUrl ?? apiBaseUrl,
+      trace: "on-first-retry",
+      screenshot: "only-on-failure",
+    },
+    webServer: webServerConfigs,
+    ...overrides,
+  });
+}
+
+// ── Usage examples ──
+
+// Standard E2E (web + api):
+// export default createPlaywrightConfig({
+//   testDir: "./specs",
+//   webServers: "full",
+//   webBaseUrl: `http://${host}:${webPort}`,
+//   apiBaseUrl: `http://${host}:${apiPort}`,
+// });
+
+// API HTTP tests (api only):
+// export default createPlaywrightConfig({
+//   testDir: "./test/http",
+//   webServers: "api-only",
+//   apiBaseUrl: `http://${host}:${apiPort}`,
+// });
+
+// ────────────────────────────────────────────────────────
+// Template variables:
+//   {{apiStartCommand}} — command to start the API server
+//   {{webStartCommand}} — command to start the web server
+//   {{PROJECT_PREFIX}}  — npm scope

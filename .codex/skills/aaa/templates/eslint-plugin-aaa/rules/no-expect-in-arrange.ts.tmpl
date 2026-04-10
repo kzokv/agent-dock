@@ -1,0 +1,58 @@
+// Rule: no-expect-in-arrange
+// Forbids expect() calls in classes that extend BaseArrange or any *Arrange class.
+
+import type { Rule } from "eslint";
+
+export const noExpectInArrange: Rule.RuleModule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description: "Disallow expect() in Arrange classes (AAA boundary violation)",
+    },
+    messages: {
+      noExpectInArrange:
+        "expect() is not allowed in Arrange classes. Arrange sets up state — move assertions to Assert classes.",
+    },
+    schema: [],
+  },
+  create(context) {
+    let insideArrangeClass = false;
+
+    return {
+      ClassDeclaration(node) {
+        const superClass = node.superClass;
+        if (!superClass) return;
+
+        // Match: extends BaseArrange, extends *Arrange, extends ArrangeMixin(...)
+        const name =
+          superClass.type === "Identifier" ? superClass.name : undefined;
+        const callee =
+          superClass.type === "CallExpression" && superClass.callee.type === "Identifier"
+            ? superClass.callee.name
+            : undefined;
+
+        if (
+          name?.endsWith("Arrange") ||
+          name === "BaseArrange" ||
+          name === "ApiBaseArrange" ||
+          callee === "ArrangeMixin" ||
+          callee === "ApiArrangeMixin"
+        ) {
+          insideArrangeClass = true;
+        }
+      },
+      "ClassDeclaration:exit"() {
+        insideArrangeClass = false;
+      },
+      CallExpression(node) {
+        if (!insideArrangeClass) return;
+        if (
+          node.callee.type === "Identifier" &&
+          node.callee.name === "expect"
+        ) {
+          context.report({ node, messageId: "noExpectInArrange" });
+        }
+      },
+    };
+  },
+};

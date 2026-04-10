@@ -1,0 +1,68 @@
+// Rule: no-direct-page-access
+// Forbids this.page.* in assistant classes (Arrange, Actions, Assert).
+// Page interactions should go through this.uiActions or this.el locators.
+
+import type { Rule } from "eslint";
+
+export const noDirectPageAccess: Rule.RuleModule = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Disallow direct this.page.* access in assistant classes",
+    },
+    messages: {
+      noDirectPageAccess:
+        "Direct this.page.* access bypasses logging and readability. Use this.uiActions or this.el locators instead.",
+    },
+    schema: [],
+  },
+  create(context) {
+    let insideAssistantClass = false;
+
+    return {
+      ClassDeclaration(node) {
+        const superClass = node.superClass;
+        if (!superClass) return;
+
+        const name =
+          superClass.type === "Identifier" ? superClass.name : undefined;
+        const callee =
+          superClass.type === "CallExpression" && superClass.callee.type === "Identifier"
+            ? superClass.callee.name
+            : undefined;
+
+        const assistantBases = [
+          "BaseArrange", "BaseActions", "BaseAssert",
+          "ApiBaseArrange", "ApiBaseActions", "ApiBaseAssert",
+        ];
+        const assistantMixins = [
+          "ArrangeMixin", "ActionsMixin", "AssertMixin",
+          "ApiArrangeMixin", "ApiActionsMixin", "ApiAssertMixin",
+        ];
+
+        if (
+          (name && (assistantBases.includes(name) || name.endsWith("Arrange") || name.endsWith("Actions") || name.endsWith("Assert"))) ||
+          (callee && assistantMixins.includes(callee))
+        ) {
+          insideAssistantClass = true;
+        }
+      },
+      "ClassDeclaration:exit"() {
+        insideAssistantClass = false;
+      },
+      MemberExpression(node) {
+        if (!insideAssistantClass) return;
+
+        // Match: this.page.*
+        if (
+          node.object.type === "MemberExpression" &&
+          node.object.object.type === "ThisExpression" &&
+          node.object.property.type === "Identifier" &&
+          node.object.property.name === "page"
+        ) {
+          context.report({ node, messageId: "noDirectPageAccess" });
+        }
+      },
+    };
+  },
+};

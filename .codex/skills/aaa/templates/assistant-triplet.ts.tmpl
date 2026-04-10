@@ -1,0 +1,78 @@
+// {{PROJECT_PREFIX}}/test-{{layer}}/src/assistants/{{domain}}/
+
+// ── Arrange ──
+// {{domain}}Arrange.ts
+import { {{BaseArrangeClass}} } from "{{baseImportPath}}";
+import { Step } from "{{PROJECT_PREFIX}}/test-framework/decorators";
+import type { {{InstanceClass}} } from "{{instanceImportPath}}";
+
+export class {{Name}}Arrange extends {{BaseArrangeClass}} {
+  declare protected readonly _instance: {{InstanceClass}};
+  private get el() { return this._instance.elements; }
+
+  @Step()
+  async setupInitialState(): Promise<void> {
+    // TODO: implement setup logic
+  }
+}
+
+// ── Actions ──
+// {{domain}}Actions.ts
+import { {{BaseActionsClass}} } from "{{baseImportPath}}";
+import { Step } from "{{PROJECT_PREFIX}}/test-framework/decorators";
+import type { {{InstanceClass}} } from "{{instanceImportPath}}";
+
+export class {{Name}}Actions extends {{BaseActionsClass}} {
+  declare protected readonly _instance: {{InstanceClass}};
+  private get el() { return this._instance.elements; }
+
+  @Step()
+  async performAction(): Promise<void> {
+    // TODO: implement the behavior under test
+  }
+}
+
+// ── Assert ──
+// {{domain}}Assert.ts
+import { expect } from "@playwright/test";
+import { {{BaseAssertClass}} } from "{{baseImportPath}}";
+import { Step } from "{{PROJECT_PREFIX}}/test-framework/decorators";
+import type { {{InstanceClass}} } from "{{instanceImportPath}}";
+
+export class {{Name}}Assert extends {{BaseAssertClass}} {
+  declare protected readonly _instance: {{InstanceClass}};
+  private get el() { return this._instance.elements; }
+
+  @Step()
+  async verifyResult(): Promise<void> {
+    // TODO: implement verification
+  }
+}
+
+// ── Factory (index.ts) ──
+import { createAssistantFactory } from "{{PROJECT_PREFIX}}/test-framework/config";
+import { {{Name}}Arrange } from "./{{Name}}Arrange.js";
+import { {{Name}}Actions } from "./{{Name}}Actions.js";
+import { {{Name}}Assert } from "./{{Name}}Assert.js";
+
+export const {{camelName}}AssistantFactory = createAssistantFactory({
+  Arrange: {{Name}}Arrange,
+  Actions: {{Name}}Actions,
+  Assert: {{Name}}Assert,
+});
+
+export type T{{Name}}Assistant = ReturnType<typeof {{camelName}}AssistantFactory>;
+
+// ────────────────────────────────────────────────────────
+// Template variables:
+//   {{Name}}              — PascalCase domain name (e.g., Settings, Profile)
+//   {{camelName}}         — camelCase domain name (e.g., settings, profile)
+//   {{domain}}            — directory name (e.g., settings, profile)
+//   {{layer}}             — "e2e" or "api"
+//   {{InstanceClass}}     — BasePage subclass or BaseEndpoint subclass
+//   {{BaseArrangeClass}}  — BaseArrange (web) or ApiBaseArrange (api)
+//   {{BaseActionsClass}}  — BaseActions (web) or ApiBaseActions (api)
+//   {{BaseAssertClass}}   — BaseAssert (web) or ApiBaseAssert (api)
+//   {{baseImportPath}}    — import path for base classes
+//   {{instanceImportPath}} — import path for the POM/endpoint class
+//   {{PROJECT_PREFIX}}    — npm scope (e.g., @tw-portfolio)

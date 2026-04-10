@@ -1,6 +1,6 @@
 ---
 name: scope-grill
-description: Relentlessly grill a scope — from a custom request, Linear tickets, or both — through a 3-phase structured session: interrogate, debate, lock. Use when the user wants to stress-test ticket scope, challenge a design proposal, or lock down implementation scope before starting work.
+description: "Relentlessly grill a scope — from a custom request, Linear tickets, or both — through a 3-phase structured session: interrogate, debate, lock. Use when the user wants to stress-test ticket scope, challenge a design proposal, or lock down implementation scope before starting work."
 ---
 
 # Scope Grill
@@ -149,6 +149,8 @@ superseded_by: null
 - Scope debate note: {path, if one was written}
 - Linear tickets: {ticket IDs, if any}
 ```
+
+**Ticking off deliverables:** After implementation is complete, the implementing agent (e.g. `/solo-dev`, `/team`) MUST revisit the todo file and tick each checkbox (`- [x]`) whose deliverable was actually implemented. This creates a clear trace from locked scope to shipped code. Items left unchecked signal scope that was agreed but not delivered — the user can then decide whether to carry them forward or drop them.
 
 **Superseding old todos:** If a previous todo exists at the same path for the same slug, write `superseded_by: {new-todo-path}` into the old todo's frontmatter after writing the new one. This prevents fresh-start agents from acting on stale decisions.
 

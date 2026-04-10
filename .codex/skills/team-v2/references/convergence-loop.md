@@ -21,6 +21,11 @@ CONVERGENCE LOOP (default max: 3 iterations)
 │  Phase 2 — QA Automation (after Implementer completes)
 │  └── Senior QA          write / update test scripts → iterate until own tests green
 │
+│  E2E COVERAGE GATE (before Phase 3)
+│  └── Cross-check Architect's design table: every non-N/A E2E Coverage
+│      entry must have a corresponding test file with ≥1 passing test.
+│      Missing? → QA writes them now. Do NOT enter validation with gaps.
+│
 │  Phase 3 — Review + Validate (parallel)
 │  ├── Architect          architectural review → design alignment findings (All tiers)
 │  ├── Code Reviewer      mechanical quality review → code quality findings (Tier 2-3)
@@ -62,6 +67,8 @@ WRAP-UP (runs once, after loop exits)
 - **Phase 1 is parallel:** TDD Implementer writes code while QA plans tests — no file-write conflicts because QA is plan-only in Phase 1.
 - **Phase 2 starts after Implementer completes Phase 1:** QA needs actual code to write test scripts against. Architect waits for Implementer's `[DONE:*]` before starting Phase 2.
 - **Phase 3 starts after both Phase 1 AND Phase 2 complete:** see Phase 3 gate below.
+
+**E2E coverage gate (Phase 2→3, hard):** Before Phase 3 starts, cross-check the Architect's design table. Every non-`N/A` entry in the E2E Coverage column must have a corresponding test file with at least one passing test. If any are missing, QA writes them before the Validator runs. Do NOT enter validation with unwritten E2E cases from the approved design.
 
 ---
 

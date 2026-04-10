@@ -41,7 +41,7 @@ notes/               Frozen knowledge snapshots
 
 ## Skills Catalog
 
-74 skills organized by domain, available at `~/.codex/skills/` (symlinked from `~/.agents/skills/`):
+75 skills organized by domain, available at `~/.codex/skills/` (symlinked from `~/.agents/skills/`):
 
 **Architecture & Design:**
 agent-designer, agent-workflow-designer, api-design-reviewer, database-designer,
@@ -67,7 +67,7 @@ senior-security, senior-secops, skill-security-auditor
 senior-qa, api-test-suite-builder, playwright-pro, skill-tester
 
 **Product & Planning:**
-grill-me, write-a-prd, prd-to-issues, interview-system-designer, tech-debt-tracker,
+grill-me, scope-grill, write-a-prd, prd-to-issues, interview-system-designer, tech-debt-tracker,
 tech-stack-evaluator, dependency-auditor
 
 **Documentation & Knowledge:**

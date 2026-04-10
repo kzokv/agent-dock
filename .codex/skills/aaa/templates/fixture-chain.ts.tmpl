@@ -1,0 +1,70 @@
+// ── Fixture Chain Pattern ──
+// Each level extends the previous, creating a typed dependency chain.
+// Playwright's .extend() ensures fixtures are created in dependency order.
+
+// ── base.ts ──
+// Provides testUser (default, gets page) + createTestUser (additional users)
+import { test as base } from "@playwright/test";
+import type { TestUser } from "{{PROJECT_PREFIX}}/test-framework";
+
+type BaseFixtures = {
+  testUser: TestUser;
+  createTestUser: () => Promise<TestUser>;
+};
+
+export const baseTest = base.extend<BaseFixtures>({
+  testUser: async ({ page, request }, use) => {
+    const user = new TestUser({ page, request });
+    await user.reset("{{apiBaseUrl}}");
+    await user.assignIdentity("{{appBaseUrl}}");
+    await use(user);
+  },
+  createTestUser: async ({ request }, use) => {
+    const users: TestUser[] = [];
+    await use(async () => {
+      const user = new TestUser({ request });
+      await user.reset("{{apiBaseUrl}}");
+      users.push(user);
+      return user;
+    });
+    // Cleanup additional users if needed
+  },
+});
+
+// ── {{domain}}.ts ──
+// Extends base → provides assistant fixture
+import { baseTest } from "./base.js";
+import { {{PageOrEndpointClass}} } from "{{instanceImportPath}}";
+import type { T{{Name}}Assistant } from "{{assistantImportPath}}";
+
+type {{Name}}Fixtures = {
+  {{camelName}}: T{{Name}}Assistant;
+};
+
+export const {{camelName}}Test = baseTest.extend<{{Name}}Fixtures>({
+  {{camelName}}: async ({ testUser }, use) => {
+    const assistant = await testUser.{{useMethod}}({{PageOrEndpointClass}});
+    await use(assistant);
+  },
+});
+
+// ── One-liner export (web) ──
+// import { createWebFixture } from "{{PROJECT_PREFIX}}/test-framework/config";
+// export const test = createWebFixture({{camelName}}Test);
+
+// ── One-liner export (api) ──
+// import { createApiFixture } from "{{PROJECT_PREFIX}}/test-api/config";
+// export const test = createApiFixture({{camelName}}Test);
+
+// ────────────────────────────────────────────────────────
+// Template variables:
+//   {{Name}}                — PascalCase name
+//   {{camelName}}           — camelCase name
+//   {{domain}}              — directory name
+//   {{PageOrEndpointClass}} — POM class (web) or Endpoint class (api)
+//   {{useMethod}}           — useWebAssistant (web) or useApiAssistant (api)
+//   {{instanceImportPath}}  — import path for the POM/endpoint
+//   {{assistantImportPath}} — import path for the assistant factory
+//   {{apiBaseUrl}}          — API base URL (from config)
+//   {{appBaseUrl}}          — App base URL (from config)
+//   {{PROJECT_PREFIX}}      — npm scope

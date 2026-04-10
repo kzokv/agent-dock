@@ -1,0 +1,57 @@
+// Rule: no-expect-in-actions
+// Forbids expect() calls in classes that extend BaseActions or any *Actions class.
+
+import type { Rule } from "eslint";
+
+export const noExpectInActions: Rule.RuleModule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description: "Disallow expect() in Actions classes (AAA boundary violation)",
+    },
+    messages: {
+      noExpectInActions:
+        "expect() is not allowed in Actions classes. Actions perform behavior — move assertions to Assert classes.",
+    },
+    schema: [],
+  },
+  create(context) {
+    let insideActionsClass = false;
+
+    return {
+      ClassDeclaration(node) {
+        const superClass = node.superClass;
+        if (!superClass) return;
+
+        const name =
+          superClass.type === "Identifier" ? superClass.name : undefined;
+        const callee =
+          superClass.type === "CallExpression" && superClass.callee.type === "Identifier"
+            ? superClass.callee.name
+            : undefined;
+
+        if (
+          name?.endsWith("Actions") ||
+          name === "BaseActions" ||
+          name === "ApiBaseActions" ||
+          callee === "ActionsMixin" ||
+          callee === "ApiActionsMixin"
+        ) {
+          insideActionsClass = true;
+        }
+      },
+      "ClassDeclaration:exit"() {
+        insideActionsClass = false;
+      },
+      CallExpression(node) {
+        if (!insideActionsClass) return;
+        if (
+          node.callee.type === "Identifier" &&
+          node.callee.name === "expect"
+        ) {
+          context.report({ node, messageId: "noExpectInActions" });
+        }
+      },
+    };
+  },
+};
