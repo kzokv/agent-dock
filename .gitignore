@@ -34,12 +34,17 @@ __pycache__/
 .codex/skills/.system/
 
 # Repo-local .codex runtime artifacts
+.codex/.codex-global-state.json.bak
+.codex/.tmp/
+.codex/ambient-suggestions/
 .codex/history.jsonl
+.codex/installation_id
 .codex/models_cache.json
 .codex/version.json
 .codex/log/
 .codex/tmp/
 .codex/cache/
+.codex/plugins/cache/
 .codex/sessions/
 .codex/archived_sessions/
 .codex/*.sqlite
@@ -64,6 +69,7 @@ cache/**
 .worklog/
 
 # Claude Code runtime artifacts
+.claude/.last-cleanup
 .claude/tasks/
 .claude/teams/
 .claude/backups/
