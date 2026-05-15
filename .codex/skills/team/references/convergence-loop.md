@@ -56,6 +56,9 @@ WRAP-UP (runs once, after loop exits)
 ├── Technical Writer     updates ALL relevant docs
 ├── Code Reviewer        reviews Technical Writer output (Tier 2-3)
 ├── Technical Writer     addresses review findings if any (Tier 2-3)
+├── Architect verifies original todo list (if user provided one):
+│     Re-read each item → confirm implemented or explicitly scoped out
+│     Output ticked checklist to main session; flag/implement any gaps before [SHUTDOWN]
 ├── Architect sends [SHUTDOWN] to main session
 └── Main session prompts user to consolidate .worklog/team/memory/ → .claude/memory/
 ```

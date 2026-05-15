@@ -237,6 +237,29 @@ Phases 3→4→5 form a **bounded convergence loop**.
 
 ---
 
+## Phase 7: Delivery Checklist
+
+**Goal:** Confirm every item in the user's original todo list was delivered.
+
+**When:** Only when the user provided a todo list (checklist, numbered list, or bullet list) as the implementation brief.
+
+**Steps:**
+1. Re-read the user's original todo list
+2. For each item, verify it was implemented (or explicitly scoped out in Phase 0)
+3. Output a ticked checklist:
+
+```
+- [x] Item 1 — implemented in `path/to/file.ts`
+- [x] Item 2 — implemented in `path/to/other.ts`
+- [ ] Item 3 — SKIPPED: out of scope per Phase 0 plan (see escalation note)
+```
+
+4. If any items are unticked and were not scoped out in Phase 0 — implement them now or escalate.
+
+**Output:** Ticked delivery checklist shared with user. All items accounted for.
+
+---
+
 ## Phase 6: Docs
 
 **Goal:** Update all documentation affected by code changes.
@@ -305,3 +328,4 @@ Phases 3→4→5 form a **bounded convergence loop**.
 | 4 — Self-Fix | (built-in) | Cycle detection, self-check |
 | 5 — Review | `/code-reviewer` | Checklist, antipatterns, standards |
 | 6 — Docs | `/technical-writing` | Evergreen docs, stale reference grep |
+| 7 — Delivery Checklist | (built-in) | Tick off original todo list; flag or implement any gaps |

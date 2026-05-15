@@ -40,15 +40,37 @@ Before asking the first question:
 
 Interview the user relentlessly. One question at a time. Walk each branch of the decision tree to resolution before moving on.
 
+### Interrogation Style
+
+For **every question**:
+
+1. **State your take first** — propose a concrete stance with reasoning
+2. **List 2–3 alternatives** — each with explicit pros and cons
+3. **Ask the user** — invite them to weigh in or challenge your stance
+
 **You MUST:**
 - Challenge anything that contradicts the current codebase design or established patterns — cite file paths or prior decisions as evidence
 - Challenge scope not justified by the stated goals
 - Press for specifics on vague acceptance criteria ("the user can manage X" → ask: create? edit? delete? all three?)
-- State your position and evidence clearly before accepting the user's answer
 
 **Phase 2 triggers — either of:**
 1. You and the user disagree after **two full exchange rounds** on the same question → auto-propose a debate team (user must confirm before spawn)
 2. The user says "let's debate this", "call the team", or equivalent → immediately propose a debate team
+
+---
+
+## Phase 1.5 — Gap & Contradiction Check
+
+Before moving to Phase 2 or Phase 3, run an `ultrathink` pass over all decisions reached in Phase 1. For each gap or contradiction found:
+
+- Propose the skill's own stance on how to resolve it
+- Classify as **critical** or **non-critical**
+
+**Critical gaps** — hard gate: present to the user and wait for resolution before proceeding.
+
+**Non-critical gaps** — list with proposed stance, non-blocking.
+
+If a debate was triggered and Phase 2 completes, re-run this gap check over the combined Phase 1 + Phase 2 conclusions before allowing scope lock.
 
 ---
 
@@ -96,7 +118,7 @@ After the debate completes, read the result file at `.worklog/scopes/{slug}/deba
 - **Visual diagrams** — flow charts, dependency charts if produced
 - **Debate note path** — where the full debate note was saved
 
-Carry these forward into Phase 3.
+Carry these forward. Then re-run Phase 1.5.
 
 ---
 
@@ -116,6 +138,10 @@ Create linked tickets for any the user confirms.
 ### 3c — Todo List
 
 Generate a prioritized, actionable todo list from the locked scope. Each item should be a concrete implementation step derived from the agreed decisions.
+
+**E2E test detection:** Before finalising the todo list, check if the scope includes new user-facing flows, authentication/authorization changes, form submissions, or API endpoint additions. If detected, add the following step to the todo list:
+
+- [ ] Run `/aaa` to add or update E2E tests covering the flows agreed in this scope session
 
 The todo list serves two use cases:
 - **Same-session** (primary): user invokes `/team` immediately — the agent already has full context, the todo is a summary
@@ -165,7 +191,15 @@ Where `{slug}` is derived from ticket IDs (e.g. `kzo-109-110`) or a short kebab-
 
 **Tip:** Remind the user of the lifecycle difference: `docs/notes/` is version-controlled and permanent; `.worklog/` is gitignored and ephemeral.
 
-### 3d — Linear write-back
+### 3d — Mockup
+
+*Only if UI changes are detected in scope* — keywords: screen, page, component, layout, modal, form; file path signals: `components/`, `pages/`, `views/`, `src/app/`, CSS/Tailwind references.
+
+> "This scope involves UI changes. Would you like a mockup screenshot of the proposed design?"
+
+If yes → delegate to the `frontend-design` skill, passing the design decisions from the session as context.
+
+### 3e — Linear write-back
 For each ticket ID provided at invocation:
 
 1. **Append** a `## Locked Scope` section to the ticket description with:
@@ -183,6 +217,7 @@ Confirm to the user: *"Scope locked and written back to [TICKET-IDs]."*
 ## Guardrails
 
 - **Never skip Phase 0** — grilling without codebase context produces shallow challenges
+- **Never skip Phase 1.5** — the gap check must run before any scope lock, even if no debate occurred
 - **One question at a time** in Phase 1 — sequential resolution builds shared understanding; do not batch questions
 - **Never lock scope unilaterally** — wait for the explicit user signal
 - **Debate is never mandatory** — many sessions resolve entirely in Phase 1; Phase 2 only triggers when genuinely needed
