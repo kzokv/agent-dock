@@ -24,3 +24,11 @@ Before `EnterWorktree`, pull the development branch to latest. After `EnterWorkt
 **Why:** `claude-dev` and `codex-net` (the tmux launchers) run this hook automatically on worktree creation. `EnterWorktree` does not. Without the hook, worktrees are missing env files, node_modules, and built artifacts — they're unusable until manually set up. The rebase step was added because `EnterWorktree` can pick `main` as the base even when the user's active branch is `dev`.
 
 **How to apply:** Every time `EnterWorktree` creates a new worktree (not when entering an existing one). The hook is project-specific (lives in `.hooks/`), so projects without it are unaffected.
+
+## File path awareness after EnterWorktree
+
+After `EnterWorktree` succeeds, the session's working directory is the worktree (e.g. `.claude/worktrees/kzo-135`). **All file writes (`Write`, `Edit`, `Bash`) must use paths rooted at the worktree, not the main repo root.**
+
+Never construct absolute paths using the main repo root for content that belongs to the feature branch. Use the worktree path returned in the `EnterWorktree` result as the base for all subsequent writes.
+
+**Why:** Files written to the main repo path land on the `dev` branch working tree, not the feature branch — they won't be committed with the PR and pollute the main repo's working tree.

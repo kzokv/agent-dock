@@ -17,3 +17,18 @@
 - **Ephemeral artifacts** (`.worklog/`) — runtime state, debate briefs/results, session-scoped notes. Not version-controlled. Skills should remind the user of this lifecycle when offering `.worklog/` as a save location.
 
 For full strategy, see `skills/team/references/doc-strategy.md`.
+
+## Pre-merge correction window for frozen snapshots
+
+**"Frozen — never update after merge"** refers to the post-merge state. Pre-merge corrections to transition notes and scope-todos are encouraged — precisely because they prevent the historical record from inheriting known inaccuracies.
+
+The rule is: once a frozen snapshot is merged to the main branch, it is immutable. Until then, prose corrections, factual fixes, and property-name typos should be addressed in the same PR before it lands.
+
+**Practical guidance:**
+- Transition note has a typo caught in Wave 2 docs review → fix it in the same PR, no new file needed.
+- Scope-todo checkbox was missed → flip it in the same PR.
+- An ADR has a wrong table value discovered before merge → correct it in place.
+
+Do NOT create a follow-up "errata" snapshot for pre-merge corrections — that would violate the single-source principle without the protection of true historical immutability.
+
+**Why:** KZO-188 Wave 2 — Code Reviewer flagged a `liveLoadingMessage` vs `liveSearchingMessage` property-name mismatch in the transition note. The Architect ruled it a pre-merge correction (1-word fix) without routing to a new review cycle. The rule clarification was promoted to prevent future uncertainty about whether pre-merge edits violate the frozen-snapshot contract.
