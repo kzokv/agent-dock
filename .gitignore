@@ -25,48 +25,31 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Local environment
-.codex/config.local.toml
-.codex/config.toml
+# This repository is also used as CODEX_HOME.
+# Ignore unrecognized local and runtime state by default.
+.codex/*
+
+# Version-controlled Codex policy and source roots.
+!.codex/AGENTS.md
+!.codex/MANIFEST.md
+!.codex/config.base.toml
+
+!.codex/agents/
+!.codex/agents/**
 .codex/agents/config/*.toml
 
-# Auto generated system skills
-.codex/skills/.system/
+!.codex/prompts/
+!.codex/prompts/**
 
-# Repo-local .codex runtime artifacts
-.codex/.codex-global-state.json.bak
-.codex/..codex-global-state.json.tmp-*
-.codex/.app-server-state-reconciled-v1
-.codex/.sandbox_migration
-.codex/.tmp/
-.codex/ambient-suggestions/
-.codex/attachments/
-.codex/chrome-native-hosts*.json
-.codex/computer-use/
-.codex/generated_images/
-.codex/history.jsonl
-.codex/installation_id
-.codex/mcp-oauth-locks/
-.codex/models_cache.json
-.codex/version.json
-.codex/log/
-.codex/tmp/
-.codex/cache/
-.codex/plugins/.plugin-appserver/
-.codex/plugins/cache/
-.codex/process_manager/
-.codex/sessions/
-.codex/archived_sessions/
-.codex/*.sqlite
-.codex/*.sqlite-shm
-.codex/*.sqlite-wal
-.codex/**/*.sqlite
-.codex/**/*.sqlite-shm
-.codex/**/*.sqlite-wal
-.codex/**/__pycache__/
-.codex/**/*.pyc
-.codex/**/*.pyo
-.codex/ORIGIN
+!.codex/runbooks/
+!.codex/runbooks/**
+
+!.codex/scripts/
+!.codex/scripts/**
+
+!.codex/skills/
+!.codex/skills/**
+.codex/skills/.system/
 
 # Session 
 session_index.jsonl
