@@ -35,20 +35,15 @@ __pycache__/
 !.codex/config.base.toml
 
 !.codex/agents/
-!.codex/agents/**
 .codex/agents/config/*.toml
 
 !.codex/prompts/
-!.codex/prompts/**
 
 !.codex/runbooks/
-!.codex/runbooks/**
 
 !.codex/scripts/
-!.codex/scripts/**
 
 !.codex/skills/
-!.codex/skills/**
 .codex/skills/.system/
 
 # Session 
