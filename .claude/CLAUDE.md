@@ -35,4 +35,4 @@ Destinations: `.claude/CLAUDE.md`, `.claude/rules/`, `docs/notes/`, `docs/adr/`.
 
 ## Clarification Protocol
 
-When a request is vague, ambiguous, or underspecified, use the AskUserQuestion tool to interview the user and build a clear spec before proceeding. Do not guess intent — ask.
+When a request is vague, ambiguous, or underspecified, clarify the single most-blocking ambiguity before proceeding. Prefer one focused, conversational question or a brief two-path summary. If AskUserQuestion is useful, limit it to 1–2 questions with 2–3 options each; do not lead with a multi-question survey. Do not guess intent when the choice would materially change the result.
