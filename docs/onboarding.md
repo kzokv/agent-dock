@@ -28,12 +28,15 @@ Supported flags:
 - `--skip-gh-auth`
 - `--with-codex-bootstrap`
 - `--without-codex-bootstrap`
+- `--upgrade-codex`
 
 Default behavior:
 - Interactive mode prompts for the target agent and defaults to `all`.
 - Automation can bypass prompts by passing `--agent`.
 - Codex bootstrap runs automatically for `codex` and `all`.
 - `cursor` and `claude` do not run Codex bootstrap unless `--with-codex-bootstrap` is passed.
+- `--upgrade-codex` forces Codex bootstrap and installs the latest CLI package.
+- `--upgrade-codex` cannot be combined with `--without-codex-bootstrap`.
 - `--without-codex-bootstrap` is supported for `codex`, `cursor`, `claude`, and `all`.
 
 Internal-only entrypoint:
@@ -214,7 +217,10 @@ When enabled, the internal Codex script:
 - generates `.codex/agents/config/*.toml` from [`.codex/scripts/render-agent-configs.py`](/Users/lume/repos/agent-dock/.codex/scripts/render-agent-configs.py)
 - upserts a trusted project block into `.codex/config.local.toml`
 - generates `.codex/config.toml` by concatenating `.codex/config.base.toml` with `.codex/config.local.toml`
-- ensures the `codex` CLI exists, installing it with `npm install -g @openai/codex` if needed
+- validates an existing CLI by running `codex --version`
+- installs `@openai/codex@latest` when the CLI is missing or fails its health check
+- installs `@openai/codex@latest` when `--upgrade-codex` is requested
+- verifies `codex --version` again after installation and reports actionable npm/PATH diagnostics on failure
 - installs the `codex-net` launcher (see Launcher install directory below)
 
 Generated config model:

@@ -284,28 +284,76 @@ ensure_gh_token_secret() {
 }
 
 ensure_codex_cli() {
-  local codex_cli_path
+  local codex_cli_path codex_version health_output install_reason
+  local upgrade_codex="${ONBOARDING_UPGRADE_CODEX:-0}"
+
   codex_cli_path="$(resolve_codex_cli_path 2>/dev/null || true)"
-  if [ -n "$codex_cli_path" ]; then
-    log "Codex CLI already available: $codex_cli_path"
-    printf '%s\n' "$codex_cli_path"
-    return 0
+  if [ -n "$codex_cli_path" ] && health_output="$("$codex_cli_path" --version 2>&1)"; then
+    codex_version="${health_output%%$'\n'*}"
+    if [ "$upgrade_codex" != "1" ]; then
+      log "Codex CLI health check passed: $codex_cli_path ($codex_version)" >&2
+      printf '%s\n' "$codex_cli_path"
+      return 0
+    fi
+    install_reason="upgrade requested"
+    log "Codex CLI upgrade requested; current CLI: $codex_cli_path ($codex_version)" >&2
+  elif [ -n "$codex_cli_path" ]; then
+    install_reason="health check failed"
+    log "WARNING: Codex CLI is present but failed 'codex --version': $codex_cli_path" >&2
+    if [ -n "${health_output:-}" ]; then
+      log "Codex health check output: ${health_output%%$'\n'*}" >&2
+    fi
+  else
+    install_reason="CLI not found"
+    log "Codex CLI not found on PATH." >&2
   fi
 
   if ! command -v npm >/dev/null 2>&1; then
-    die "Codex CLI ('codex') is required. Install npm and rerun onboarding, or install Codex manually with: npm install -g @openai/codex"
+    log "ERROR: Codex CLI needs installation or repair ($install_reason), but npm is unavailable. Install npm, then rerun onboarding; or install Codex manually." >&2
+    return 1
   fi
 
-  log "Codex CLI ('codex') not found; installing with npm install -g @openai/codex"
-  npm install -g @openai/codex
+  log "Installing latest Codex CLI with: npm install -g @openai/codex@latest ($install_reason)" >&2
+  if ! npm install -g @openai/codex@latest >&2; then
+    log "ERROR: Codex CLI installation failed. Check npm network access and global-prefix permissions, then rerun onboarding. You can inspect the active prefix with: npm prefix -g" >&2
+    return 1
+  fi
   hash -r 2>/dev/null || true
 
   codex_cli_path="$(resolve_codex_cli_path 2>/dev/null || true)"
   if [ -z "$codex_cli_path" ]; then
-    die "Codex CLI install completed but 'codex' is still not resolvable. Ensure your npm global bin directory is available, then rerun onboarding."
+    log "ERROR: Codex CLI installation completed but 'codex' is not resolvable. Add the npm global bin directory to PATH, then rerun onboarding." >&2
+    return 1
   fi
 
-  log "Installed Codex CLI: $codex_cli_path"
+  if ! health_output="$("$codex_cli_path" --version 2>&1)"; then
+    log "ERROR: Codex CLI still fails its health check after installation: $codex_cli_path" >&2
+    if [ -n "$health_output" ]; then
+      log "Codex health check output: ${health_output%%$'\n'*}" >&2
+    fi
+    log "ERROR: Codex CLI installation is unhealthy after repair. Remove the broken global package and reinstall it, then rerun onboarding." >&2
+    return 1
+  fi
+
+  codex_version="${health_output%%$'\n'*}"
+  log "Codex CLI ready: $codex_cli_path ($codex_version)" >&2
+  printf '%s\n' "$codex_cli_path"
+}
+
+ensure_healthy_codex_cli_for_optional_launcher() {
+  local codex_cli_path health_output
+  codex_cli_path="$(resolve_codex_cli_path 2>/dev/null || true)"
+  if [ -z "$codex_cli_path" ]; then
+    return 1
+  fi
+  if ! health_output="$("$codex_cli_path" --version 2>&1)"; then
+    log "WARNING: Skipping codex-net launcher because Codex failed its health check: $codex_cli_path" >&2
+    if [ -n "$health_output" ]; then
+      log "Codex health check output: ${health_output%%$'\n'*}" >&2
+    fi
+    return 1
+  fi
+
   printf '%s\n' "$codex_cli_path"
 }
 

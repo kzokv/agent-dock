@@ -14,6 +14,7 @@ cursor_home_override=""
 claude_home_override=""
 skip_gh_auth=0
 codex_bootstrap_mode="auto"
+upgrade_codex_cli=0
 internal_codex_flag="--internal-root-dispatch"
 initial_arg_count=$#
 
@@ -35,6 +36,7 @@ Options:
   --skip-gh-auth                Skip GitHub auth bootstrap (optional, default: off)
   --with-codex-bootstrap        Force Codex config/CLI/bootstrap steps on (optional, default: auto)
   --without-codex-bootstrap     Force Codex config/CLI/bootstrap steps off (optional, default: auto)
+  --upgrade-codex               Install the latest Codex CLI during bootstrap (optional, default: off)
 EOF_HELP
 }
 
@@ -98,6 +100,10 @@ while [ $# -gt 0 ]; do
       codex_bootstrap_mode="off"
       shift
       ;;
+    --upgrade-codex)
+      upgrade_codex_cli=1
+      shift
+      ;;
     -*)
       die_with_help "Unknown flag $1"
       ;;
@@ -154,6 +160,11 @@ if [ "$codex_bootstrap_mode" = "off" ]; then
   should_run_codex_bootstrap=0
 fi
 
+if [ "$upgrade_codex_cli" = "1" ]; then
+  [ "$codex_bootstrap_mode" != "off" ] || die_with_help "Cannot combine --upgrade-codex and --without-codex-bootstrap"
+  should_run_codex_bootstrap=1
+fi
+
 log "Starting onboarding"
 log "Repo root: $repo_root"
 log "Agent selection: $agent_selection"
@@ -180,6 +191,7 @@ export ONBOARDING_CONFIG_BASE="$config_base"
 export ONBOARDING_CONFIG_LOCAL="$config_local"
 export ONBOARDING_CONFIG_FILE="$config_file"
 export ONBOARDING_PROJECT_HEADER="$project_header"
+export ONBOARDING_UPGRADE_CODEX="$upgrade_codex_cli"
 
 ensure_shared_onboarding_paths "$timestamp" "$codex_home" "$agents_home" "$agents_skills_dir" "$agents_skills_library_dir"
 ensure_tmux_config "$repo_root" "$timestamp"
