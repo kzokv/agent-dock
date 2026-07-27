@@ -113,11 +113,56 @@ assert_symlink_target_canonical() {
 
 create_fake_codex() {
   local bin_dir="$1"
-  cat > "${bin_dir}/codex" <<'EOF'
+  local version="${2:-0.100.0}"
+  cat > "${bin_dir}/codex" <<EOF
 #!/usr/bin/env bash
-printf 'fake-codex %s\n' "$*" >/dev/null
+if [ "\${1:-}" = "--version" ]; then
+  printf 'codex-cli ${version}\n'
+  exit 0
+fi
+printf 'fake-codex %s\n' "\$*" >/dev/null
 EOF
   chmod +x "${bin_dir}/codex"
+}
+
+create_broken_codex() {
+  local bin_dir="$1"
+  cat > "${bin_dir}/codex" <<'EOF'
+#!/usr/bin/env bash
+printf 'Error: native Codex executable is missing\n' >&2
+exit 127
+EOF
+  chmod +x "${bin_dir}/codex"
+}
+
+create_fake_npm_installer() {
+  local bin_dir="$1"
+  local log_file="$2"
+  local exit_code="${3:-0}"
+  cat > "${bin_dir}/npm" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "\$*" >> "$log_file"
+if [ "\${1:-}" = "install" ]; then
+  if [ "$exit_code" -ne 0 ]; then
+    printf 'simulated npm install failure\n' >&2
+    exit "$exit_code"
+  fi
+  printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    'if [ "\${1:-}" = "--version" ]; then printf "codex-cli 9.9.9\\\\n"; exit 0; fi' \
+    'exit 0' > "${bin_dir}/codex"
+  chmod +x "${bin_dir}/codex"
+  exit 0
+fi
+if [ "\${1:-}" = "prefix" ] && [ "\${2:-}" = "-g" ]; then
+  printf '%s\n' "$(dirname "$bin_dir")"
+  exit 0
+fi
+printf 'unexpected npm call: %s\n' "\$*" >&2
+exit 1
+EOF
+  chmod +x "${bin_dir}/npm"
 }
 
 create_fake_gh() {
@@ -415,6 +460,95 @@ test_conflicting_bootstrap_flags_fail() {
   assert_file_contains "$output_file" 'Cannot combine --with-codex-bootstrap and --without-codex-bootstrap'
 }
 
+test_missing_codex_is_installed_and_verified() {
+  local fixture_repo="$fixtures_root/repo-codex-missing"
+  local fixture_home="$fixtures_root/home-codex-missing"
+  local bin_dir="$fixtures_root/bin-codex-missing"
+  local xdg_bin="$fixtures_root/xdg-codex-missing"
+  local npm_log="$fixtures_root/npm-codex-missing.log"
+  local output_file="$fixtures_root/codex-missing.out"
+  mkdir -p "$fixture_home" "$bin_dir" "$xdg_bin"
+  prepare_fixture_repo "$fixture_repo"
+  create_fake_npm_installer "$bin_dir" "$npm_log"
+
+  HOME="$fixture_home" XDG_BIN_HOME="$xdg_bin" PATH="${bin_dir}:/usr/bin:/bin" \
+    "$fixture_repo/scripts/onboarding.sh" --agent codex --skip-gh-auth >"$output_file" 2>&1
+
+  assert_file_contains "$npm_log" 'install -g @openai/codex@latest'
+  assert_file_contains "$output_file" 'Codex CLI not found on PATH.'
+  assert_file_contains "$output_file" 'Codex CLI ready:'
+  [ -x "$xdg_bin/codex-net" ] || fail "Expected codex-net after Codex installation"
+}
+
+test_broken_codex_is_repaired_and_verified() {
+  local fixture_repo="$fixtures_root/repo-codex-broken"
+  local fixture_home="$fixtures_root/home-codex-broken"
+  local bin_dir="$fixtures_root/bin-codex-broken"
+  local xdg_bin="$fixtures_root/xdg-codex-broken"
+  local npm_log="$fixtures_root/npm-codex-broken.log"
+  local output_file="$fixtures_root/codex-broken.out"
+  mkdir -p "$fixture_home" "$bin_dir" "$xdg_bin"
+  prepare_fixture_repo "$fixture_repo"
+  create_broken_codex "$bin_dir"
+  create_fake_npm_installer "$bin_dir" "$npm_log"
+
+  PATH_OVERRIDE="$bin_dir" run_onboarding "$fixture_repo" "$fixture_home" "$xdg_bin" --agent codex --skip-gh-auth >"$output_file" 2>&1
+
+  assert_file_contains "$output_file" "failed 'codex --version'"
+  assert_file_contains "$output_file" 'native Codex executable is missing'
+  assert_file_contains "$npm_log" 'install -g @openai/codex@latest'
+  assert_file_contains "$output_file" 'Codex CLI ready:'
+}
+
+test_upgrade_codex_forces_latest_install() {
+  local fixture_repo="$fixtures_root/repo-codex-upgrade"
+  local fixture_home="$fixtures_root/home-codex-upgrade"
+  local bin_dir="$fixtures_root/bin-codex-upgrade"
+  local xdg_bin="$fixtures_root/xdg-codex-upgrade"
+  local npm_log="$fixtures_root/npm-codex-upgrade.log"
+  local output_file="$fixtures_root/codex-upgrade.out"
+  mkdir -p "$fixture_home" "$bin_dir" "$xdg_bin"
+  prepare_fixture_repo "$fixture_repo"
+  create_fake_codex "$bin_dir" "0.100.0"
+  create_fake_npm_installer "$bin_dir" "$npm_log"
+
+  PATH_OVERRIDE="$bin_dir" run_onboarding "$fixture_repo" "$fixture_home" "$xdg_bin" --agent codex --upgrade-codex --skip-gh-auth >"$output_file" 2>&1
+
+  assert_file_contains "$output_file" 'Codex CLI upgrade requested'
+  assert_file_contains "$npm_log" 'install -g @openai/codex@latest'
+  assert_file_contains "$output_file" 'codex-cli 9.9.9'
+}
+
+test_codex_repair_failure_is_actionable() {
+  local fixture_repo="$fixtures_root/repo-codex-repair-failure"
+  local fixture_home="$fixtures_root/home-codex-repair-failure"
+  local bin_dir="$fixtures_root/bin-codex-repair-failure"
+  local xdg_bin="$fixtures_root/xdg-codex-repair-failure"
+  local npm_log="$fixtures_root/npm-codex-repair-failure.log"
+  local output_file="$fixtures_root/codex-repair-failure.out"
+  mkdir -p "$fixture_home" "$bin_dir" "$xdg_bin"
+  prepare_fixture_repo "$fixture_repo"
+  create_broken_codex "$bin_dir"
+  create_fake_npm_installer "$bin_dir" "$npm_log" 42
+
+  assert_command_fails_with "$output_file" env HOME="$fixture_home" XDG_BIN_HOME="$xdg_bin" PATH="${bin_dir}:${PATH}" "$fixture_repo/scripts/onboarding.sh" --agent codex --skip-gh-auth
+  assert_file_contains "$output_file" 'Codex CLI installation failed.'
+  assert_file_contains "$output_file" 'npm prefix -g'
+}
+
+test_upgrade_codex_conflicts_with_disabled_bootstrap() {
+  local fixture_repo="$fixtures_root/repo-codex-upgrade-conflict"
+  local fixture_home="$fixtures_root/home-codex-upgrade-conflict"
+  local bin_dir="$fixtures_root/bin-codex-upgrade-conflict"
+  local xdg_bin="$fixtures_root/xdg-codex-upgrade-conflict"
+  local output_file="$fixtures_root/codex-upgrade-conflict.out"
+  mkdir -p "$fixture_home" "$bin_dir" "$xdg_bin"
+  prepare_fixture_repo "$fixture_repo"
+
+  assert_command_fails_with "$output_file" env HOME="$fixture_home" XDG_BIN_HOME="$xdg_bin" PATH="${bin_dir}:${PATH}" "$fixture_repo/scripts/onboarding.sh" --agent codex --upgrade-codex --without-codex-bootstrap --skip-gh-auth
+  assert_file_contains "$output_file" 'Cannot combine --upgrade-codex and --without-codex-bootstrap'
+}
+
 create_fake_claude() {
   local bin_dir="$1"
   cat > "${bin_dir}/claude" <<'EOF'
@@ -495,6 +629,16 @@ test_direct_codex_script_is_blocked
 printf 'ok - direct codex onboarding entry is blocked\n'
 test_conflicting_bootstrap_flags_fail
 printf 'ok - conflicting bootstrap flags fail cleanly\n'
+test_missing_codex_is_installed_and_verified
+printf 'ok - missing codex is installed and verified\n'
+test_broken_codex_is_repaired_and_verified
+printf 'ok - broken codex is repaired and verified\n'
+test_upgrade_codex_forces_latest_install
+printf 'ok - codex upgrade installs and verifies latest\n'
+test_codex_repair_failure_is_actionable
+printf 'ok - codex repair failure is actionable\n'
+test_upgrade_codex_conflicts_with_disabled_bootstrap
+printf 'ok - codex upgrade conflicts with disabled bootstrap\n'
 test_claude_dev_launcher_includes_tmux_integration
 printf 'ok - claude-dev launcher includes tmux integration\n'
 test_idempotent_rerun_keeps_config_stable

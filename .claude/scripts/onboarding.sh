@@ -34,10 +34,10 @@ else
 fi
 
 # Install codex-net launcher if Codex CLI available
-codex_cli_path="$(resolve_codex_cli_path 2>/dev/null || true)"
+codex_cli_path="$(ensure_healthy_codex_cli_for_optional_launcher || true)"
 if [ -n "$codex_cli_path" ]; then
   install_codex_net_launcher "$codex_cli_path"
 else
-  log "Codex CLI ('codex') not found; skipping codex-net launcher."
-  log "Install with: npm install -g @openai/codex"
+  log "Healthy Codex CLI not available; skipping codex-net launcher."
+  log "Rerun with --with-codex-bootstrap to install or repair Codex."
 fi

@@ -47,6 +47,7 @@ Generated or machine-local: `.codex/config.toml`, `.codex/agents/config/*.toml`,
 # Automation mode
 ./scripts/onboarding.sh --agent all --skip-gh-auth
 ./scripts/onboarding.sh --agent cursor --with-codex-bootstrap
+./scripts/onboarding.sh --agent codex --upgrade-codex
 ```
 
 After onboarding, use the launchers:
@@ -73,7 +74,10 @@ The repo path is stored in `~/.codex/ORIGIN`.
 4. **Roles** — define team roles in `.codex/agents/role-*.md`
 5. **Prompts** — customize decision/retrieval flows in `.codex/prompts/`
 
-Re-run `./scripts/onboarding.sh` after changes to re-wire symlinks.
+Re-run `./scripts/onboarding.sh` after changes to re-wire symlinks. Codex bootstrap
+validates an existing CLI with `codex --version` and automatically reinstalls the
+latest npm package when the CLI is missing or unhealthy. Pass `--upgrade-codex` to
+force an upgrade even when the current CLI is healthy.
 
 ## Validation and maintenance
 
