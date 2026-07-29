@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scope Grill"
+  short_description: "Stress-test and lock implementation scope"
+  default_prompt: "Use $scope-grill to challenge this proposal and lock its implementation scope."
