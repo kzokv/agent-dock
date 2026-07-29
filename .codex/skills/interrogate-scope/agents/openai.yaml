@@ -1,0 +1,6 @@
+interface:
+  display_name: "Interrogate Scope"
+  short_description: "Run the scope-specific grilling interview"
+  default_prompt: "Use $interrogate-scope to stress-test this implementation scope one decision at a time."
+policy:
+  allow_implicit_invocation: false

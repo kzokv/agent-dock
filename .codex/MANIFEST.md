@@ -67,7 +67,7 @@ senior-security, senior-secops, skill-security-auditor
 senior-qa, api-test-suite-builder, playwright-pro, skill-tester
 
 **Product & Planning:**
-grill-me, scope-grill, write-a-prd, prd-to-issues, interview-system-designer, tech-debt-tracker,
+grilling, grill-me, interrogate-scope, scope-grill, write-a-prd, prd-to-issues, interview-system-designer, tech-debt-tracker,
 tech-stack-evaluator, dependency-auditor
 
 **Documentation & Knowledge:**

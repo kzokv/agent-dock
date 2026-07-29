@@ -1,0 +1,6 @@
+{
+    "git.showCursorWorktrees": true,
+    "scm.alwaysShowRepositories": true,
+    "scm.alwaysShowActions": false,
+    "git.detectWorktrees": true
+}
